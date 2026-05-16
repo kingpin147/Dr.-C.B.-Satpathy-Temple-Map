@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real Interactive Temple Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+
+    :root {
+      --primary-red: #C2002F;
+      --bg-white: #ffffff;
+      --text-dark: #1a1a1a;
+      --text-gray: #555555;
+      --border-light: #eeeeee;
+    }
+
+    /* Full Screen Setup */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Mr Eaves XL Mod OT', 'Inter', sans-serif;
+      background: var(--bg-white);
+      color: var(--text-dark);
+      overflow: hidden;
+    }
+
+    .page {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      max-width: 100%;
+      background: var(--bg-white);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 40px 50px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      border-bottom: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: 'Mr Eaves XL Mod OT', sans-serif;
+      font-weight: 700;
+      font-size: clamp(28px, 4vw, 48px);
+      color: var(--primary-red);
+      letter-spacing: -0.5px;
+    }
+
+
+    .subtitle {
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 12px 0 0;
+      color: var(--text-gray);
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid var(--border-light);
+      background: var(--bg-white);
+      color: var(--text-dark);
+      border-radius: 4px;
+      padding: 10px 24px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    button:hover { 
+      background: var(--primary-red);
+      color: white;
+      border-color: var(--primary-red);
+    }
+
+    /* Map takes the remaining center space */
+    #map {
+      flex-grow: 1; 
+      width: 100%;
+      background: #fafafa;
+    }
+
+    /* Minimalist Small Popup */
+    .leaflet-popup-content-wrapper {
+      border-radius: 0;
+      box-shadow: none;
+      border: 1px solid var(--border-light);
+      padding: 0;
+    }
+
+    .leaflet-popup-content {
+      margin: 0 !important;
+      padding: 10px 16px !important;
+      border-left: 4px solid var(--primary-red);
+      min-width: 140px;
+    }
+
+    .leaflet-popup-tip-container {
+      display: none;
+    }
+
+    .popup-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'Mr Eaves XL Mod OT', sans-serif;
+      color: var(--primary-red) !important;
+      margin-bottom: 2px;
+    }
+
+
+    .popup-text {
+      font-size: 11px;
+      color: var(--text-gray);
+      letter-spacing: 0.5px;
+      font-family: 'Mr Eaves XL Mod OT', sans-serif;
+    }
+
+
+    .footer-note {
+      padding: 20px 50px;
+      background: #fafafa;
+      font-size: 13px;
+      color: #999;
+      border-top: 1px solid var(--border-light);
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .temple-icon {
+      background: var(--primary-red);
+      border: 2px solid white;
+      width: 14px !important;
+      height: 14px !important;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(194, 0, 47, 0.4);
+    }
+
+    /* Mobile Responsive Adjustments */
+    @media (max-width: 768px) {
+      .header { padding: 30px 20px; flex-direction: column; align-items: flex-start; }
+      .footer-note { padding: 15px 20px; }
+      h1 { font-size: 32px; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="page">
+    <div class="panel">
+      <div class="header">
+        <div>
+          <h1 id="title">Global Spiritual Footprints</h1>
+          <p class="subtitle" id="subtitle">Click India markers or use the buttons to navigate.</p>
+        </div>
+        <div class="buttons">
+          <button onclick="showWorld()">World View</button>
+          <button onclick="showIndia()">India View</button>
+        </div>
+      </div>
+
+      <div id="map"></div>
+
+      
+    </div>
+  </div>
+
+  <script>
+    // Initialize Map
+    const map = L.map('map', {
+      worldCopyJump: true,
+      zoomControl: true
+    }).setView([22, 20], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const countryLayer = L.layerGroup().addTo(map);
+    const templeLayer = L.layerGroup();
+
+    const templeIcon = L.divIcon({
+      className: 'custom-pin',
+      html: '<div class="temple-icon"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -7]
+    });
+
+
+    // Navigation functions must be defined before the array uses them
+    function showIndia() {
+      map.flyTo([22.9734, 78.6569], 5, { duration: 1.2 });
+      if (!map.hasLayer(templeLayer)) templeLayer.addTo(map);
+      document.getElementById('title').innerText = 'India Temple Network';
+      document.getElementById('subtitle').innerText = 'State-wise temple markers are now visible across India.';
+    }
+
+    function showWorld() {
+      map.flyTo([22, 20], 2, { duration: 1.2 });
+      if (map.hasLayer(templeLayer)) map.removeLayer(templeLayer);
+      document.getElementById('title').innerText = 'Global Spiritual Footprints';
+      document.getElementById('subtitle').innerText = 'Click India, or use the India button, to zoom into the country.';
+    }
+
+    const countries = [
+      { name: 'India', coords: [22.9734, 78.6569], zoom: 5, action: showIndia },
+      { name: 'USA', coords: [37.0902, -95.7129], zoom: 4 },
+      { name: 'Sri Lanka', coords: [7.8731, 80.7718], zoom: 7 },
+      { name: 'UK', coords: [55.3781, -3.4360], zoom: 6 },
+      { name: 'Australia', coords: [-25.2744, 133.7751], zoom: 4 }
+    ];
+
+    countries.forEach(c => {
+      const marker = L.circleMarker(c.coords, {
+        radius: 8,
+        color: 'var(--primary-red)',
+        weight: 1,
+        fillColor: 'var(--primary-red)',
+        fillOpacity: 0.2
+      }).addTo(countryLayer);
+
+      marker.bindPopup(`<div class="popup-title">${c.name}</div><div class="popup-text">Click to explore region</div>`, {
+        offset: [0, -5]
+      });
+      marker.on('click', () => c.action ? c.action() : map.flyTo(c.coords, c.zoom));
+    });
+
+
+    const sampleTemples = [
+      { name: 'Jagannath Temple', state: 'Odisha', coords: [19.8135, 85.8312] },
+      { name: 'Akshardham', state: 'Delhi NCR', coords: [28.6127, 77.2773] },
+      { name: 'Siddhivinayak', state: 'Maharashtra', coords: [19.0177, 72.8302] },
+      { name: 'Somnath Temple', state: 'Gujarat', coords: [20.8880, 70.4012] },
+      { name: 'Meenakshi Temple', state: 'Tamil Nadu', coords: [9.9195, 78.1193] }
+    ];
+
+    sampleTemples.forEach(t => {
+      L.marker(t.coords, { icon: templeIcon })
+        .bindPopup(`<div class="popup-title">${t.name}</div><div class="popup-text">${t.state}</div>`, {
+          offset: [0, -5]
+        })
+        .addTo(templeLayer);
+    });
+
+
+    // Handle Resize
+    window.addEventListener('resize', () => {
+      map.invalidateSize();
+    });
+  </script>
+</body>
+</html>
