@@ -35,6 +35,63 @@
       width: 100vw;
       height: 100vh;
       box-sizing: border-box;
+      position: relative;
+    }
+
+    /* Loading Overlay styling */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-white);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
+    }
+
+    .loading-overlay.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loading-container {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(194, 0, 47, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary-red);
+      animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+    }
+
+    .loading-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary-red);
+      letter-spacing: 0.5px;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
     }
 
     .panel {
@@ -176,6 +233,14 @@
 <body>
 
   <div class="page">
+    <!-- Beautiful Loading Overlay -->
+    <div id="loading-screen" class="loading-overlay">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <div class="loading-text">Locations are loading...</div>
+      </div>
+    </div>
+
     <div class="panel">
       <div class="header">
         <div>
@@ -217,62 +282,154 @@
       popupAnchor: [0, -7]
     });
 
+    // Dynamic data references
+    let countriesData = [];
+    let templesData = [];
+    let dataReceived = false;
 
-    // Navigation functions must be defined before the array uses them
+    // Helper to find India coordinates dynamically, or fallback to default
+    function getIndiaCoords() {
+      const india = countriesData.find(c => c.name.toLowerCase().trim() === 'india');
+      return india && india.coords ? india.coords : [22.9734, 78.6569];
+    }
+
+    function getIndiaZoom() {
+      const india = countriesData.find(c => c.name.toLowerCase().trim() === 'india');
+      return india && india.zoom ? india.zoom : 5;
+    }
+
+    // Navigation and rendering functions
     function showIndia() {
-      map.flyTo([22.9734, 78.6569], 5, { duration: 1.2 });
+      showCountryTemples('India');
+    }
+
+    function showCountryTemples(countryName) {
+      const normalized = countryName.toLowerCase().trim();
+      const country = countriesData.find(c => c.name.toLowerCase().trim() === normalized);
+      
+      // Zoom map to the country's coordinate and zoom setting
+      const coords = country && country.coords ? country.coords : [22, 20];
+      const zoom = country && country.zoom ? country.zoom : 5;
+      map.flyTo(coords, zoom, { duration: 1.2 });
+      
+      // Render the temples belonging to this specific country
+      renderTemplesForCountry(countryName);
+      
       if (!map.hasLayer(templeLayer)) templeLayer.addTo(map);
-      document.getElementById('title').innerText = 'India Temple Network';
-      document.getElementById('subtitle').innerText = 'State-wise temple markers are now visible across India.';
+      
+      // Update UI titles dynamically
+      document.getElementById('title').innerText = `${countryName} Temple Network`;
+      document.getElementById('subtitle').innerText = `State-wise temple markers are now visible across ${countryName}.`;
+    }
+
+    function renderTemplesForCountry(countryName) {
+      templeLayer.clearLayers();
+      const normalized = countryName.toLowerCase().trim();
+      const filteredTemples = templesData.filter(t => t.country && t.country.toLowerCase().trim() === normalized);
+      
+      filteredTemples.forEach(t => {
+        if (!t.coords || t.coords.length < 2) return;
+        const lat = parseFloat(t.coords[0]);
+        const lng = parseFloat(t.coords[1]);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        L.marker([lat, lng], { icon: templeIcon })
+          .bindPopup(`<div class="popup-title">${t.name}</div><div class="popup-text">${t.state || ''}</div>`, {
+            offset: [0, -5]
+          })
+          .addTo(templeLayer);
+      });
     }
 
     function showWorld() {
       map.flyTo([22, 20], 2, { duration: 1.2 });
       if (map.hasLayer(templeLayer)) map.removeLayer(templeLayer);
       document.getElementById('title').innerText = 'Global Spiritual Footprints';
-      document.getElementById('subtitle').innerText = 'Click India, or use the India button, to zoom into the country.';
+      document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
     }
 
-    const countries = [
-      { name: 'India', coords: [22.9734, 78.6569], zoom: 5, action: showIndia },
-      { name: 'USA', coords: [37.0902, -95.7129], zoom: 4 },
-      { name: 'Sri Lanka', coords: [7.8731, 80.7718], zoom: 7 },
-      { name: 'UK', coords: [55.3781, -3.4360], zoom: 6 },
-      { name: 'Australia', coords: [-25.2744, 133.7751], zoom: 4 }
-    ];
+    // Listen for data messages from Wix Velo
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (!message || message.type !== 'LOAD_DATA') return;
 
-    countries.forEach(c => {
-      const marker = L.circleMarker(c.coords, {
-        radius: 8,
-        color: 'var(--primary-red)',
-        weight: 1,
-        fillColor: 'var(--primary-red)',
-        fillOpacity: 0.2
-      }).addTo(countryLayer);
+      dataReceived = true;
+      countriesData = message.countries || [];
+      templesData = message.temples || [];
 
-      marker.bindPopup(`<div class="popup-title">${c.name}</div><div class="popup-text">Click to explore region</div>`, {
-        offset: [0, -5]
-      });
-      marker.on('click', () => c.action ? c.action() : map.flyTo(c.coords, c.zoom));
-    });
+      // Clear existing markers
+      countryLayer.clearLayers();
+      templeLayer.clearLayers();
 
+      // Render Countries (World View)
+      countriesData.forEach(c => {
+        if (!c.coords || c.coords.length < 2) return;
+        const lat = parseFloat(c.coords[0]);
+        const lng = parseFloat(c.coords[1]);
+        if (isNaN(lat) || isNaN(lng)) return;
 
-    const sampleTemples = [
-      { name: 'Jagannath Temple', state: 'Odisha', coords: [19.8135, 85.8312] },
-      { name: 'Akshardham', state: 'Delhi NCR', coords: [28.6127, 77.2773] },
-      { name: 'Siddhivinayak', state: 'Maharashtra', coords: [19.0177, 72.8302] },
-      { name: 'Somnath Temple', state: 'Gujarat', coords: [20.8880, 70.4012] },
-      { name: 'Meenakshi Temple', state: 'Tamil Nadu', coords: [9.9195, 78.1193] }
-    ];
+        const marker = L.circleMarker([lat, lng], {
+          radius: 8,
+          color: 'var(--primary-red)',
+          weight: 1,
+          fillColor: 'var(--primary-red)',
+          fillOpacity: 0.2
+        }).addTo(countryLayer);
 
-    sampleTemples.forEach(t => {
-      L.marker(t.coords, { icon: templeIcon })
-        .bindPopup(`<div class="popup-title">${t.name}</div><div class="popup-text">${t.state}</div>`, {
+        marker.bindPopup(`<div class="popup-title">${c.name}</div><div class="popup-text">Click to explore region</div>`, {
           offset: [0, -5]
-        })
-        .addTo(templeLayer);
+        });
+
+        marker.on('click', () => {
+          showCountryTemples(c.name);
+        });
+      });
+
+      // Hide loading overlay
+      const loader = document.getElementById('loading-screen');
+      if (loader) {
+        loader.classList.add('fade-out');
+      }
     });
 
+    // Fallback Mock Data Loader (for local testing/preview)
+    function loadMockData() {
+      if (dataReceived) return;
+      window.postMessage({
+        type: 'LOAD_DATA',
+        countries: [
+          { name: 'India', coords: [22.9734, 78.6569], zoom: 5 },
+          { name: 'USA', coords: [37.0902, -95.7129], zoom: 4 },
+          { name: 'Sri Lanka', coords: [7.8731, 80.7718], zoom: 7 },
+          { name: 'UK', coords: [55.3781, -3.4360], zoom: 6 },
+          { name: 'Australia', coords: [-25.2744, 133.7751], zoom: 4 }
+        ],
+        temples: [
+          { name: 'Jagannath Temple', state: 'Odisha', country: 'India', coords: [19.8135, 85.8312] },
+          { name: 'Akshardham', state: 'Delhi NCR', country: 'India', coords: [28.6127, 77.2773] },
+          { name: 'Siddhivinayak', state: 'Maharashtra', country: 'India', coords: [19.0177, 72.8302] },
+          { name: 'Somnath Temple', state: 'Gujarat', country: 'India', coords: [20.8880, 70.4012] },
+          { name: 'Meenakshi Temple', state: 'Tamil Nadu', country: 'India', coords: [9.9195, 78.1193] }
+        ]
+      }, '*');
+    }
+
+    // Notify Wix parent that iframe is ready to receive data
+    window.addEventListener('DOMContentLoaded', () => {
+      // Invalidate map size to ensure it renders correctly in the iframe
+      setTimeout(() => {
+        map.invalidateSize();
+        window.parent.postMessage({ type: 'READY' }, '*');
+      }, 200);
+
+      // Trigger mock data load if no response after 2.5 seconds
+      setTimeout(() => {
+        if (!dataReceived) {
+          console.log("No Wix parent detected. Loading fallback mock data...");
+          loadMockData();
+        }
+      }, 2500);
+    });
 
     // Handle Resize
     window.addEventListener('resize', () => {
