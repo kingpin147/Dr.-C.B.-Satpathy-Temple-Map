@@ -1,4 +1,5 @@
 import wixData from 'wix-data';
+import { resolveCoordsFromShortLinks } from 'backend/resolveMapLink';
 
 // Variables to cache fetched data and coordinate readiness
 let cachedCountries = null;
@@ -24,8 +25,93 @@ $w.onReady(function () {
     });
 });
 
+// Hardcoded fallback coords — ONLY for India world marker, last resort only
+const INDIA_FALLBACK = { coords: /** @type {[number, number]} */ ([22.9734, 78.6569]), zoom: 5 };
+
 /**
- * Fetches data from the single "TempleLocationMap" Wix Collection and normalizes it
+ * Gets final coordinates for a CMS item.
+ * Priority:
+ *   1. templeLocation short URL → resolved lat/lng (via backend)
+ *   2. templeLatitude / templeLongitude DB fields
+ *   3. Hardcoded India fallback (only for India world marker, last resort)
+ * Auto-detects swapped lat/lng by checking value ranges.
+ * @param {object} item - CMS record
+ * @param {object} urlCoordsMap - map of resolved short URL → { lat, lng }
+ * @returns {[number, number] | null}
+ */
+function getCoordsForItem(item, urlCoordsMap) {
+    // 1. Short URL resolved coords
+    if (item.templeLocation && urlCoordsMap[item.templeLocation]) {
+        const c = urlCoordsMap[item.templeLocation];
+        return /** @type {[number, number]} */ ([c.lat, c.lng]);
+    }
+
+    // 2. DB lat/lng fields with auto-detect swap
+    const a = parseFloat(item.templeLatitude);
+    const b = parseFloat(item.templeLongitude);
+    if (!isNaN(a) && !isNaN(b)) {
+        // Auto-detect swap: latitude must be between -90 and 90
+        if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return /** @type {[number, number]} */ ([a, b]);
+        if (Math.abs(b) <= 90 && Math.abs(a) <= 180) return /** @type {[number, number]} */ ([b, a]);
+    }
+
+    // 3. Hardcoded fallback — only for India world marker
+    const viewType = (item.viewType || '').toLowerCase().trim();
+    const country  = (item.countryName || '').toLowerCase().trim();
+    if (viewType === 'world' && country === 'india') {
+        console.warn('Using hardcoded fallback coords for India world marker');
+        return /** @type {[number, number]} */ ([INDIA_FALLBACK.coords[0], INDIA_FALLBACK.coords[1]]);
+    }
+
+    return null;
+}
+
+/**
+ * Converts a Wix media URI (wix:image://v1/...) to a public https URL.
+ * If already a plain URL, returns as-is.
+ * @param {string} wixUri
+ * @returns {string}
+ */
+function wixImageToUrl(wixUri) {
+    if (!wixUri) return '';
+
+    // wix:image://v1/{fileId}/{displayName}#originWidth=...
+    // fileId includes the extension e.g. abc123~mv2.png
+    if (wixUri.startsWith('wix:image://v1/')) {
+        const withoutPrefix = wixUri.replace('wix:image://v1/', '');
+        // fileId is everything up to the first '/'
+        const fileId = withoutPrefix.split('/')[0];
+        if (fileId) {
+            return `https://static.wixstatic.com/media/${fileId}`;
+        }
+    }
+
+    // Plain https URL — validate it looks like an actual image, not a website homepage
+    if (wixUri.startsWith('http')) {
+        const lower = wixUri.toLowerCase();
+        const hasImageExt = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|#|$)/.test(lower);
+        // Accept if it has an image extension OR is from a known image CDN
+        if (hasImageExt || lower.includes('wixstatic.com') || lower.includes('static.')) {
+            return wixUri;
+        }
+        // Website homepage URLs (no image extension) — not usable as img src
+        console.warn(`templeImage looks like a website URL, not an image: ${wixUri}`);
+        return '';
+    }
+
+    console.warn('Could not convert image URI:', wixUri);
+    return '';
+}
+
+/**
+ * Fetches data from the single "TempleLocationMap" Wix Collection and normalizes it.
+ *
+ * Performance strategy:
+ *  - Items WITHOUT a mapLink get coords instantly from lat/lng — no async needed.
+ *  - Items WITH a mapLink are batched into ONE backend call that resolves all
+ *    short URLs in parallel with a 3-second per-URL timeout.
+ *  - This means the map loads as fast as the slowest short-URL redirect (max 3s),
+ *    regardless of how many items there are.
  */
 async function loadCmsData() {
     try {
@@ -33,60 +119,115 @@ async function loadCmsData() {
         const result = await wixData.query("TempleLocationMap")
             .limit(1000)
             .find();
-        
+
         const items = result.items || [];
         console.log(`Fetched ${items.length} records from Wix CMS.`);
 
-        // Default zoom levels for countries in World View
+        // --- Step 1: Resolve short URLs in one batch call ---
+        // Collect only the items that have a templeLocation (others skip the network call entirely)
+        const linkItems = items.map((item, i) => ({ index: i, url: item.templeLocation || null }));
+        const urlsToResolve = linkItems.filter(x => x.url).map(x => x.url);
+
+        // One backend call resolves all short URLs in parallel
+        let resolvedCoords = [];
+        if (urlsToResolve.length > 0) {
+            console.log(`Resolving ${urlsToResolve.length} map links in one batch call...`);
+            resolvedCoords = await resolveCoordsFromShortLinks(urlsToResolve);
+        }
+
+        // Build a map: templeLocation URL → resolved coords (or null)
+        const urlCoordsMap = {};
+        let resolvedIndex = 0;
+        linkItems.forEach(x => {
+            if (x.url) {
+                urlCoordsMap[x.url] = resolvedCoords[resolvedIndex++] || null;
+            }
+        });
+
+        // --- Step 2: Get final coords per item (templeLocation first, lat/lng fallback) ---
+        // getCoordsForItem is defined at module root — pass urlCoordsMap as argument
+
+        // Default zoom levels — only India has a hardcoded fallback zoom
+        // All other countries use zoom from DB or a generic default of 4
         const countryZoomMap = {
-            "india": 5,
-            "usa": 4,
-            "australia": 4,
-            "sri lanka": 7,
-            "uk": 6
+            "india": INDIA_FALLBACK.zoom
         };
 
-        // 1. Filter and map World View (Countries)
-        const countries = items
-            .filter(item => item.viewType && item.viewType.toLowerCase().trim() === "world")
-            .map(item => {
-                const name = item.countryName || "";
-                const lat = parseFloat(item.templeLatitude);
-                const lng = parseFloat(item.templeLongitude);
-                const normalizedNameLower = name.toLowerCase().trim();
-                const zoom = countryZoomMap[normalizedNameLower] || 4;
-                return {
-                    name,
-                    coords: [lat, lng],
-                    zoom
-                };
-            })
-            .filter(c => c.name && !isNaN(c.coords[0]) && !isNaN(c.coords[1]));
+        // --- Step 3: Build countries and temples arrays ---
+        // countries = one marker per unique country (for world view dots)
+        // temples   = ALL items (both India and World) with name/image for rich popups
+        const countries = [];
+        const temples = [];
+        const seenCountries = new Set();
 
-        // 2. Filter and map India View (Temples) - matches any viewType that is not "world"
-        const temples = items
-            .filter(item => item.viewType && item.viewType.toLowerCase().trim() !== "world")
-            .map(item => {
-                const name = item.templeName || "";
-                const state = item.regionType || "";
-                const country = item.countryName || "";
-                const lat = parseFloat(item.templeLatitude);
-                const lng = parseFloat(item.templeLongitude);
-                return {
-                    name,
-                    state,
-                    country,
-                    coords: [lat, lng]
-                };
-            })
-            .filter(t => t.name && !isNaN(t.coords[0]) && !isNaN(t.coords[1]));
+        items.forEach(item => {
+            const coords = getCoordsForItem(item, urlCoordsMap);
+            if (!coords) {
+                console.warn(`Skipping item "${item.templeName || item.countryName || 'unknown'}" — no valid coordinates`);
+                return;
+            }
+
+            const viewType   = (item.viewType || '').toLowerCase().trim();
+            const countryKey = (item.countryName || '').toLowerCase().trim();
+            const name       = item.templeName || '';
+            const state      = item.regionType || '';
+            const country    = item.countryName || '';
+            const image      = wixImageToUrl(item.templeImage || '');
+
+            if (viewType === 'world') {
+                if (!country) {
+                    console.warn(`Skipping World item — missing countryName`);
+                    return;
+                }
+                if (!name) {
+                    console.warn(`Skipping World item — missing templeName`);
+                    return;
+                }
+
+                // Add one country dot per unique country (used for flyTo on India button etc.)
+                if (!seenCountries.has(countryKey)) {
+                    seenCountries.add(countryKey);
+                    const zoom = countryZoomMap[countryKey] || 4;
+                    countries.push({ name: country, coords, zoom });
+                    console.log(`Country added: ${country} at [${coords}]`);
+                }
+
+                // Also add as a temple so the popup shows name + image
+                const locationUrl = item.templeLocation || '';
+                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl });
+                console.log(`World temple added: ${name} (${country}) at [${coords}]`);
+
+            } else {
+                // India or other country-specific view
+                if (!name) {
+                    console.warn(`Skipping temple item — missing templeName (viewType: "${item.viewType}", country: "${country}")`);
+                    return;
+                }
+                const locationUrl = item.templeLocation || '';
+                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl });
+                console.log(`Temple added: ${name} (${country}) at [${coords}]`);
+            }
+        });
+
+        // Ensure India always appears as a country dot even if not in DB
+        if (!seenCountries.has('india')) {
+            countries.push({ name: 'India', coords: INDIA_FALLBACK.coords, zoom: INDIA_FALLBACK.zoom });
+            console.log('India country marker injected from fallback');
+        }
+
+        // Extract unique region names from India temples for the filter dropdown
+        const indiaRegions = [...new Set(
+            temples
+                .filter(t => !t.isWorld && t.country.toLowerCase().trim() === 'india' && t.state)
+                .map(t => t.state)
+        )];
 
         cachedCountries = countries;
         cachedTemples = temples;
 
-        console.log(`CMS Data normalized: ${cachedCountries.length} countries, ${cachedTemples.length} temples.`);
+        console.log(`CMS Data normalized: ${cachedCountries.length} countries, ${cachedTemples.length} temples, ${indiaRegions.length} India regions.`);
         isDataLoaded = true;
-        
+
         // Try sending data if the iframe is already ready
         sendDataToMap();
 
@@ -100,10 +241,18 @@ async function loadCmsData() {
  */
 function sendDataToMap() {
     if (isDataLoaded && isIframeReady && !hasSentData) {
+        // Extract regions from cached temples for the dropdown
+        const regions = [...new Set(
+            cachedTemples
+                .filter(t => !t.isWorld && t.country.toLowerCase().trim() === 'india' && t.state)
+                .map(t => t.state)
+        )];
+
         $w(MAP_COMPONENT_ID).postMessage({
             type: "LOAD_DATA",
             countries: cachedCountries,
-            temples: cachedTemples
+            temples: cachedTemples,
+            regions: regions
         });
         hasSentData = true;
         console.log("Successfully posted CMS data to Map HTML component.");
