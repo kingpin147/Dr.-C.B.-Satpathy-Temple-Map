@@ -1,4 +1,5 @@
 import wixData from 'wix-data';
+import wixLocation from 'wix-location';
 import { resolveCoordsFromShortLinks } from 'backend/resolveMapLink';
 
 // Variables to cache fetched data and coordinate readiness
@@ -17,10 +18,26 @@ $w.onReady(function () {
 
     // 2. Listen for the "READY" event from the HTML component
     $w(MAP_COMPONENT_ID).onMessage((event) => {
-        if (event.data && event.data.type === "READY") {
+        if (!event || !event.data) return;
+        if (event.data.type === "READY") {
             console.log("Map HTML Component is ready to receive data.");
             isIframeReady = true;
             sendDataToMap();
+        } else if (event.data.type === 'NAVIGATE' && event.data.href) {
+            // Allow the iframe to request navigation within the Wix site
+            try {
+                wixLocation.to(event.data.href);
+            } catch (err) {
+                console.warn('NAVIGATE request failed:', err);
+            }
+        } else if (event.data.type === 'EXTERNAL_URL' && event.data.href) {
+            // Open external links (Google Maps, YouTube, etc.) from the parent page,
+            // not inside the HTML iframe.
+            try {
+                wixLocation.to(event.data.href);
+            } catch (err) {
+                console.warn('EXTERNAL_URL request failed:', err);
+            }
         }
     });
 });
@@ -194,7 +211,8 @@ async function loadCmsData() {
 
                 // Also add as a temple so the popup shows name + image
                 const locationUrl = item.templeLocation || '';
-                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl });
+                const tour = item.youtubeLink || item.tourLink || item.templeTour || '';
+                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl, tour });
                 console.log(`World temple added: ${name} (${country}) at [${coords}]`);
 
             } else {
@@ -204,7 +222,8 @@ async function loadCmsData() {
                     return;
                 }
                 const locationUrl = item.templeLocation || '';
-                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl });
+                const tour = item.youtubeLink || item.tourLink || item.templeTour || '';
+                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl, tour });
                 console.log(`Temple added: ${name} (${country}) at [${coords}]`);
             }
         });

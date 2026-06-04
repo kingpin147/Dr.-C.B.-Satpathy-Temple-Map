@@ -27,6 +27,7 @@
       margin: 0;
       padding: 0;
       width: 100%;
+      min-height: 100%;
       height: 100%;
       font-family: 'Mr Eaves XL Mod OT', 'Inter', sans-serif;
       background: var(--bg-white);
@@ -38,6 +39,7 @@
       display: flex;
       flex-direction: column;
       width: 100%;
+      min-height: 100%;
       height: 100%;
       box-sizing: border-box;
       position: relative;
@@ -197,7 +199,9 @@
     #map {
       flex: 1 1 0;
       width: 100%;
+      height: 100%;
       min-height: 0;
+      min-width: 0;
     }
 
     /* ── Temple Marker ── */
@@ -208,6 +212,17 @@
       cursor: pointer;
       filter: drop-shadow(0 3px 6px rgba(194,0,47,0.4));
       transition: transform 0.2s ease, filter 0.2s ease;
+      pointer-events: auto;
+      display: block;
+    }
+    .custom-pin {
+      position: relative;
+      cursor: pointer;
+      z-index: 1;
+      display: inline-block;
+      width: 32px;
+      height: 42px;
+      pointer-events: auto;
     }
     .temple-marker:hover {
       transform: scale(1.2) translateY(-3px);
@@ -276,6 +291,18 @@
 
     .popup-image { width: 100%; height: 140px; object-fit: cover; display: block; border-bottom: 1px solid var(--border-light); }
     .popup-body  { padding: 12px 16px; border-left: 4px solid var(--primary-red); }
+    .popup-body a {
+      color: inherit;
+      text-decoration: none;
+      border: none;
+      outline: none;
+    }
+    .popup-body a:hover {
+      text-decoration: underline;
+    }
+    .popup-body a:focus {
+      outline: none;
+    }
     .popup-title {
       font-size: 12px; font-weight: 700; text-transform: uppercase;
       letter-spacing: 1px; font-family: 'Mr Eaves XL Mod OT', sans-serif;
@@ -366,19 +393,6 @@
         <div class="controls">
           <button id="btn-world" onclick="showWorld()">World View</button>
           <button id="btn-india" onclick="showIndia()">India View</button>
-          <div id="controls-sep" class="controls-separator"></div>
-          <div id="region-filter" class="region-filter">
-            <select id="zone-select" onchange="onZoneSelect(this.value)">
-              <option value="">All Zones</option>
-              <option value="North India">North India</option>
-              <option value="South India">South India</option>
-              <option value="East India">East India</option>
-              <option value="West India">West India</option>
-            </select>
-            <select id="state-select" onchange="onStateSelect(this.value)">
-              <option value="">All States</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -507,15 +521,48 @@
     const map = new maplibregl.Map({
       container: 'map',
       style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-      center: [78.6569, 22.9734],
-      zoom: getResponsiveZoom(2),
+      center: [0, 20],
+      zoom: getResponsiveZoom(1.1),
       dragRotate: false,
       pitchWithRotate: false,
       touchZoomRotate: false,
-      maxPitch: 0
+      maxPitch: 0,
+      attributionControl: false
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+    // Ensure map resizes when the container changes size
+    function resizeMap() {
+      if (map && typeof map.resize === 'function') {
+        map.resize();
+      }
+    }
+
+    window.addEventListener('resize', resizeMap);
+    if (typeof ResizeObserver === 'function') {
+      const containerObserver = new ResizeObserver(resizeMap);
+      containerObserver.observe(document.documentElement);
+    }
+
+    const WORLD_ZOOM_THRESHOLD = 3.3;
+    const INDIA_ZOOM_THRESHOLD = 4.8;
+    const INDIA_BOUNDS = {
+      minLng: 68, maxLng: 98,
+      minLat: 6,  maxLat: 36
+    };
+    function isCenterInsideIndia() {
+      const center = map.getCenter();
+      return center.lng >= INDIA_BOUNDS.minLng && center.lng <= INDIA_BOUNDS.maxLng && center.lat >= INDIA_BOUNDS.minLat && center.lat <= INDIA_BOUNDS.maxLat;
+    }
+    map.on('moveend', () => {
+      const zoom = map.getZoom();
+      if (zoom <= WORLD_ZOOM_THRESHOLD && currentView !== 'world') {
+        showWorld();
+      } else if (zoom >= INDIA_ZOOM_THRESHOLD && currentView !== 'india' && isCenterInsideIndia()) {
+        showIndia();
+      }
+    });
 
     // ─────────────────────────────────────────────
     // STATE
@@ -530,6 +577,7 @@
     let selectedZone    = '';
     let selectedState   = '';
     let allIndiaStates  = [];
+    let stateInfoPopup  = null;
 
     // GeoJSON cache — fetched once, reused every time India view is triggered
     let cachedStatesGeoJson = null;
@@ -557,16 +605,8 @@
     // ─────────────────────────────────────────────
     // MAP LOAD – add layers once GeoJSON is ready
     // ─────────────────────────────────────────────
-    map.on('load', async () => {
+    map.on('load', () => {
       mapLoaded = true;
-
-      // Start pre-fetching GeoJSON in the background immediately
-      fetchStatesGeoJson().then(geoJson => {
-        if (!geoJson) return;
-        addIndiaStateLayers(geoJson);
-      });
-
-      // Remove loading screen once the map tiles are ready
       hideLoadingScreen();
     });
 
@@ -643,6 +683,13 @@
                 break;
               }
             }
+            if (stateInfoPopup) {
+              stateInfoPopup.remove();
+            }
+            stateInfoPopup = new maplibregl.Popup({ offset: [0, -30], closeOnClick: true })
+              .setLngLat(e.lngLat)
+              .setHTML(`<div style="padding:10px 14px; font-size:14px; font-weight:700; color:#C2002F; text-align:center; background:#ffffff; border-radius:8px; border:1px solid #eee;">${name}</div>`)
+              .addTo(map);
           }
         }
       });
@@ -755,12 +802,15 @@
     function showRegionFilter(show) {
       const f = document.getElementById('region-filter');
       const s = document.getElementById('controls-sep');
+      if (!f || !s) return;
       if (show) {
         f.classList.add('visible'); s.classList.add('visible');
       } else {
         f.classList.remove('visible'); s.classList.remove('visible');
-        document.getElementById('zone-select').value = '';
-        document.getElementById('state-select').value = '';
+        const zone = document.getElementById('zone-select');
+        const state = document.getElementById('state-select');
+        if (zone) zone.value = '';
+        if (state) state.value = '';
         selectedZone = ''; selectedState = '';
       }
     }
@@ -770,8 +820,9 @@
     // ─────────────────────────────────────────────
     function showWorld() {
       currentView = 'world';
-      map.flyTo({ center: [20, 22], zoom: getResponsiveZoom(2), duration: 1000 });
-      renderAllTemples();
+      map.flyTo({ center: [0, 20], zoom: getResponsiveZoom(1.1), duration: 1000 });
+      clearTempleLayer();
+      renderCountryDots();
       updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
       document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
@@ -781,17 +832,13 @@
 
     function showIndia() {
       currentView = 'india';
-      selectedZone = ''; selectedState = '';
-      document.getElementById('zone-select').value = '';
-      populateStateDropdown();
       map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), duration: 1000 });
-      renderTemplesForCountry('India');
-      // Ensure GeoJSON + layers are ready
-      fetchStatesGeoJson().then(gj => { if (gj) addIndiaStateLayers(gj); updateBoundariesVisibility(); });
+      hideCountryDots();
+      renderIndiaTemples();
       document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
-      document.getElementById('subtitle').innerText = 'Filter by Zone or State, or click any state on the map.';
+      document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
       setActiveButton('btn-india');
-      showRegionFilter(true);
+      showRegionFilter(false);
     }
 
     function showCountryTemples(countryName) {
@@ -800,24 +847,21 @@
       const coords = (db && db.coords) || (key === 'india' ? INDIA_COORDS : [22, 20]);
       const zoom   = (db && db.zoom)   || (key === 'india' ? INDIA_ZOOM   : 4);
 
+      if (key === 'india') {
+        showIndia();
+        return;
+      }
+
       map.flyTo({ center: [coords[1], coords[0]], zoom: getResponsiveZoom(zoom), duration: 1000 });
+      hideCountryDots();
       renderTemplesForCountry(countryName);
 
-      if (key === 'india') {
-        currentView = 'india';
-        fetchStatesGeoJson().then(gj => { if (gj) addIndiaStateLayers(gj); updateBoundariesVisibility(); });
-        document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
-        document.getElementById('subtitle').innerText = 'Filter by Zone or State, or click any state on the map.';
-        setActiveButton('btn-india');
-        showRegionFilter(true);
-      } else {
-        currentView = 'country';
-        updateBoundariesVisibility();
-        document.getElementById('title').innerText = `Spiritual & Charitable Centres — ${countryName}`;
-        document.getElementById('subtitle').innerText = `Markers are now visible across ${countryName}.`;
-        setActiveButton(null);
-        showRegionFilter(false);
-      }
+      currentView = 'country';
+      updateBoundariesVisibility();
+      document.getElementById('title').innerText = `Spiritual & Charitable Centres — ${countryName}`;
+      document.getElementById('subtitle').innerText = `Markers are now visible across ${countryName}.`;
+      setActiveButton(null);
+      showRegionFilter(false);
     }
 
     // ─────────────────────────────────────────────
@@ -857,17 +901,26 @@
             ? `<div class="popup-text" style="font-weight:600;color:#C2002F;">${t.country}</div>` : '';
           const regionLine = t.state ? `<div class="popup-text">${t.state}</div>` : '';
 
+          // Build popup HTML with clickable name (opens Google Maps short link if available)
+          const safeLocation = t.locationUrl || '';
           const popup = new maplibregl.Popup({ offset: [0,-38], maxWidth: '260px' }).setHTML(`
             <img class="popup-image" src="${imgSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />
             <div class="popup-body">
-              <div class="popup-title">${t.name}</div>
+              <div class="popup-title">
+                ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" data-external="true" style="color:inherit;text-decoration:none;border:none;outline:none;">${t.name}</a>` : `${t.name}` }
+              </div>
               ${countryLine}${regionLine}
+              ${ safeLocation ? `<div style="margin-top:8px"><a href="${safeLocation}" target="_blank" rel="noopener noreferrer" data-external="true" style="color:#0077cc;font-weight:700;font-size:12px;border:none;outline:none;">Open in Google Maps</a></div>` : '' }
+              ${ t.tour ? `<div style="margin-top:6px"><a href="${t.tour}" target="_blank" rel="noopener noreferrer" data-external="true" style="color:#C2002F;font-weight:700;font-size:12px;border:none;outline:none;">Watch Tour</a></div>` : '' }
             </div>`);
 
           const marker = new maplibregl.Marker({ element: el })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(map);
+          el.addEventListener('mouseenter', () => { el.style.zIndex = 999; });
+          el.addEventListener('mouseleave', () => { el.style.zIndex = 1; });
+          el.addEventListener('click', () => { el.style.zIndex = 999; });
           templeMarkers.push(marker);
         }
         if (i < list.length) requestAnimationFrame(addBatch);
@@ -886,9 +939,46 @@
       renderTemplesList(filtered);
     }
 
-    function renderAllTemples() {
+    function renderWorldTemples() {
       clearTempleLayer();
-      renderTemplesList(templesData);
+      renderTemplesList(templesData.filter(t => t.isWorld));
+    }
+
+    function renderIndiaTemples() {
+      clearTempleLayer();
+      renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'));
+    }
+
+    function renderCountryDots() {
+      clearCountryLayer();
+      countriesData.forEach(c => {
+        if (!c.coords || c.coords.length < 2) return;
+        const lat = parseFloat(c.coords[0]);
+        const lng = parseFloat(c.coords[1]);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const el = document.createElement('div');
+        el.className = 'custom-pin';
+        el.innerHTML = createCountryDotHtml();
+
+        const popup = new maplibregl.Popup({ offset: [0,-10] }).setHTML(`
+          <div class="country-popup-body">
+            <div class="country-popup-name">${c.name}</div>
+            <div class="country-popup-cta">Click to explore</div>
+          </div>`);
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+          .addTo(map);
+
+        el.addEventListener('click', () => showCountryTemples(c.name));
+        countryMarkers.push(marker);
+      });
+    }
+
+    function hideCountryDots() {
+      clearCountryLayer();
     }
 
     // ─────────────────────────────────────────────
@@ -982,48 +1072,16 @@
           .filter(t => t.country && t.country.toLowerCase().trim() === 'india' && t.state)
           .map(t => t.state)
       )];
-      populateStateDropdown();
 
       clearCountryLayer();
       clearTempleLayer();
 
       // Ensure India country dot always exists
-      const worldList = [...countriesData];
-      if (!worldList.some(c => c.name.toLowerCase().trim() === 'india')) {
-        worldList.push({ name: 'India', coords: INDIA_COORDS, zoom: INDIA_ZOOM });
-      }
-
-      // Render country dots
-      worldList.forEach(c => {
-        if (!c.coords || c.coords.length < 2) return;
-        const lat = parseFloat(c.coords[0]);
-        const lng = parseFloat(c.coords[1]);
-        if (isNaN(lat) || isNaN(lng)) return;
-
-        const el = document.createElement('div');
-        el.className = 'custom-pin';
-        el.innerHTML = createCountryDotHtml();
-
-        const popup = new maplibregl.Popup({ offset: [0,-10] }).setHTML(`
-          <div class="country-popup-body">
-            <div class="country-popup-name">${c.name}</div>
-            <div class="country-popup-cta">Click to explore</div>
-          </div>`);
-
-        const marker = new maplibregl.Marker({ element: el })
-          .setLngLat([lng, lat])
-          .setPopup(popup)
-          .addTo(map);
-
-        el.addEventListener('click', () => showCountryTemples(c.name));
-        countryMarkers.push(marker);
-      });
-
-      // Render world-view temple markers
-      renderTemplesList(templesData);
-
       // Hide loading screen once data arrives
       hideLoadingScreen();
+
+      // Show world view by default once data is loaded
+      showWorld();
 
       // Notify the parent iframe that map is ready
       window.parent.postMessage({ type: 'READY' }, '*');
@@ -1031,6 +1089,30 @@
 
     // Also notify on first load in case Wix sends data before map.on('load') fires
     window.parent.postMessage({ type: 'READY' }, '*');
+
+    // Forward internal navigation clicks to the parent page (Wix) so links inside
+    // the HTML component can navigate the site. Use: <a data-navigate="/temple-map-page">Explore Centers</a>
+    document.addEventListener('click', (ev) => {
+      try {
+        const anchor = ev.target.closest && ev.target.closest('a');
+        if (anchor && (anchor.target === '_blank' || anchor.hasAttribute('data-external'))) {
+          const href = anchor.getAttribute('href');
+          if (href) {
+            window.open(href, '_blank', 'noopener');
+            ev.preventDefault();
+            return;
+          }
+        }
+
+        const el = ev.target.closest && ev.target.closest('[data-navigate], .explore-centers, [data-explore-centers]');
+        if (!el) return;
+        const href = el.getAttribute('data-navigate') || el.getAttribute('href') || el.dataset.href || '/';
+        window.parent.postMessage({ type: 'NAVIGATE', href }, '*');
+        ev.preventDefault();
+      } catch (e) {
+        // ignore
+      }
+    });
   </script>
 </body>
 </html>
