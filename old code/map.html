@@ -740,19 +740,6 @@
 
     const templePlaceholderSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='140' viewBox='0 0 260 140'%3E%3Crect width='260' height='140' fill='%23fdf5f7'/%3E%3Cpolygon points='130,22 108,74 152,74' fill='%23C2002F' opacity='0.6'/%3E%3Crect x='108' y='74' width='44' height='38' fill='%23C2002F' opacity='0.4'/%3E%3Crect x='122' y='94' width='16' height='18' rx='8' fill='%23C2002F' opacity='0.5'/%3E%3Ctext x='130' y='134' text-anchor='middle' font-family='Inter,sans-serif' font-size='9' fill='%23C2002F' opacity='0.45'%3ENo Image Available%3C/text%3E%3C/svg%3E`;
 
-    let cachedWorldGeoJson = null;
-    async function fetchWorldGeoJson() {
-      if (cachedWorldGeoJson) return cachedWorldGeoJson;
-      try {
-        const res = await fetch('https://openlayers.org/en/v6.0.1/examples/data/geojson/countries.geojson');
-        cachedWorldGeoJson = await res.json();
-        return cachedWorldGeoJson;
-      } catch(e) {
-        console.warn('Failed to fetch World countries GeoJSON:', e);
-        return null;
-      }
-    }
-
     // ─────────────────────────────────────────────
     // GeoJSON FETCH (cached)
     // ─────────────────────────────────────────────
@@ -771,76 +758,13 @@
     // ─────────────────────────────────────────────
     // MAP LOAD – add layers once GeoJSON is ready
     // ─────────────────────────────────────────────
-    map.on('load', async () => {
+    map.on('load', () => {
       mapLoaded = true;
       hideLoadingScreen();
-
-      // Fetch and setup World boundaries
-      const worldGeo = await fetchWorldGeoJson();
-      if (worldGeo) {
-        // Pre-assign colorful indices
-        worldGeo.features.forEach((feature, i) => {
-          feature.properties.color = STATE_COLORS[i % STATE_COLORS.length];
-        });
-        addWorldCountryLayers(worldGeo);
-      }
-
-      // Fetch and setup India boundaries
-      const indiaGeo = await fetchStatesGeoJson();
-      if (indiaGeo) {
-        addIndiaStateLayers(indiaGeo);
-      }
     });
-
-    function addWorldCountryLayers(geoJson) {
-      if (map.getSource('world-countries')) return;
-
-      map.addSource('world-countries', { type: 'geojson', data: geoJson });
-
-      // World countries shadow layer
-      map.addLayer({
-        id: 'world-countries-shadow',
-        type: 'fill',
-        source: 'world-countries',
-        layout: { visibility: 'visible' },
-        paint: {
-          'fill-color': '#000000',
-          'fill-opacity': 0.12,
-          'fill-translate': [-5, 5]
-        }
-      });
-
-      // World countries colored fill
-      map.addLayer({
-        id: 'world-countries-fill',
-        type: 'fill',
-        source: 'world-countries',
-        layout: { visibility: 'visible' },
-        paint: {
-          'fill-color': ['get', 'color'],
-          'fill-opacity': 0.8
-        }
-      });
-
-      // World countries white border
-      map.addLayer({
-        id: 'world-countries-border',
-        type: 'line',
-        source: 'world-countries',
-        layout: { visibility: 'visible' },
-        paint: {
-          'line-color': '#ffffff',
-          'line-width': 1,
-          'line-opacity': 0.7
-        }
-      });
-
-      updateBoundariesVisibility();
-    }
 
     function addIndiaStateLayers(geoJson) {
       if (map.getSource('india-states')) return; // already added
-
 
       map.addSource('india-states', { type: 'geojson', data: geoJson });
 
@@ -993,15 +917,12 @@
 
     function updateBoundariesVisibility() {
       if (!mapLoaded) return;
-      const indiaOn = currentView === 'india' || currentView === 'region';
-      const worldOn = currentView === 'world' || currentView === 'country';
-
-      // Toggle India state layers
-      const indiaVis = indiaOn ? 'visible' : 'none';
+      const on = currentView === 'india' || currentView === 'region';
+      const vis = on ? 'visible' : 'none';
       ['india-states-shadow','india-states-fill','india-states-border','india-states-hover','india-states-selected-border'].forEach(id => {
-        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', indiaVis);
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
       });
-      if (indiaOn) {
+      if (on) {
         if (selectedState) {
           updateStateFilter('india-states-selected-border', selectedState);
         } else if (selectedZone) {
@@ -1010,12 +931,6 @@
           updateStateFilter('india-states-selected-border', '');
         }
       }
-
-      // Toggle World country layers
-      const worldVis = worldOn ? 'visible' : 'none';
-      ['world-countries-shadow','world-countries-fill','world-countries-border'].forEach(id => {
-        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', worldVis);
-      });
     }
 
     // ─────────────────────────────────────────────
@@ -1189,7 +1104,7 @@
               </div>
             </div>`);
 
-          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, 0] })
+          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(map);
@@ -1242,7 +1157,7 @@
             <div class="country-popup-cta">Click to explore</div>
           </div>`);
 
-        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, 0] })
+        const marker = new maplibregl.Marker({ element: el })
           .setLngLat([lng, lat])
           .setPopup(popup)
           .addTo(map);

@@ -1,115 +1,70 @@
 import { fetch } from 'wix-fetch';
 
-/**
- * Resolves an array of Google Maps short URLs in parallel (server-side).
- * Each URL is fetched with a 3-second timeout — if it times out or fails,
- * null is returned for that entry so the caller can fall back to lat/lng.
- *
- * Accepts an array so the frontend makes ONE backend call instead of N.
- *
- * @param {string[]} shortUrls
- * @returns {Promise<Array<{ lat: number, lng: number } | null>>}
- */
 export async function resolveCoordsFromShortLinks(shortUrls) {
     if (!Array.isArray(shortUrls) || shortUrls.length === 0) return [];
-
     const results = await Promise.all(shortUrls.map(url => resolveOne(url)));
     return results;
 }
 
-/**
- * Resolves a single short URL with a 3-second timeout.
- * @param {string} shortUrl
- * @returns {Promise<{ lat: number, lng: number } | null>}
- */
 async function resolveOne(shortUrl) {
-    if (!shortUrl || typeof shortUrl !== 'string') return null;
+    if (!shortUrl) return null;
 
     try {
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 3000)
-        );
+        const response = await Promise.race([
+            fetch(shortUrl, {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+        ]);
 
-        // Try with manual redirect to get the location header immediately (faster and avoids page load/blocking)
-        const fetchPromiseManual = fetch(shortUrl, { method: 'GET', redirect: 'manual' });
-        const responseManual = await Promise.race([fetchPromiseManual, timeoutPromise]);
-        
-        if (responseManual.status >= 300 && responseManual.status < 400) {
-            const loc = responseManual.headers.get('location');
-            if (loc) {
-                const parsed = parseCoordsFromUrl(loc);
-                if (parsed) return parsed;
-            }
+        let finalUrl = response.url || '';
+        const locationHeader = response.headers?.get('location');
+        if (locationHeader) finalUrl = locationHeader;
+
+        // Recursive for consent pages
+        if (finalUrl.includes('consent.google')) {
+            const match = finalUrl.match(/continue=([^&]+)/);
+            if (match) return resolveOne(decodeURIComponent(match[1]));
         }
 
-        // Fallback to auto-redirect if manual didn't return a Location or coords
-        const fetchPromiseAuto = fetch(shortUrl, { method: 'GET' });
-        const responseAuto = await Promise.race([fetchPromiseAuto, timeoutPromise]);
-        const finalUrl = responseAuto.url || '';
-        return parseCoordsFromUrl(finalUrl);
-
+        return parseCoordsFromUrl(finalUrl) || parseCoordsFromUrl(shortUrl);
     } catch (err) {
-        console.warn(`Could not resolve map link "${shortUrl}": ${err.message}`);
+        console.warn(`Failed to resolve ${shortUrl}:`, err.message);
         return null;
     }
 }
 
-/**
- * Parses lat/lng from a full Google Maps URL.
- * Handles:
- *   /@lat,lng,zoom  (most common share link)
- *   ?q=lat,lng
- *   ?ll=lat,lng
- *   !3d[lat]!4d[lng]
- *   General [lat],[lng] pattern anywhere in url
- */
 function parseCoordsFromUrl(url) {
     if (!url) return null;
+    const normalized = url.trim();
 
-    // 1. Check common formats
-    let match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    // Priority 1: Exact pin location (most accurate)
+    let match = normalized.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/); // !3d = lat, !4d = lng
     if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
 
-    match = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    match = normalized.match(/!1d(-?\d+\.\d+)!2d(-?\d+\.\d+)/);
+    if (match) return { lat: parseFloat(match[2]), lng: parseFloat(match[1]) }; // swapped order sometimes
+
+    match = normalized.match(/!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)/);
+    if (match) return { lat: parseFloat(match[2]), lng: parseFloat(match[1]) };
+
+    // Priority 2: Place pin coordinates (after @)
+    match = normalized.match(/@(-?\d+\.\d+),(-?\d+\.\d+),(\d+z)/);
     if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
 
-    match = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-
-    match = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-    if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-
-    // 2. Generic fallback coordinate scanner: any lat/lng separated by comma
-    match = url.match(/(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (match) {
-        const lat = parseFloat(match[1]);
-        const lng = parseFloat(match[2]);
-        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
-            return { lat, lng };
+    // Fallback: any valid pair (last resort)
+    const allPairs = [...normalized.matchAll(/(-?\d+\.\d+),(-?\d+\.\d+)/g)];
+    for (const m of allPairs) {
+        const a = parseFloat(m[1]);
+        const b = parseFloat(m[2]);
+        if (Math.abs(a) <= 90 && Math.abs(b) <= 180) {
+            return { lat: a, lng: b };
         }
     }
 
-    console.warn(`Could not parse coordinates from URL: ${url}`);
+    console.warn(`No coordinates found in: ${url}`);
     return null;
 }
-
-import wixData from "wix-data";
-
-export async function data() {
-  try {
-    const results = await wixData.query("TempleLocationMap").find();
-    
-    if (results.items.length > 0) {
-      console.log(results.items); // Splitting out just the items array is usually cleaner
-      return results.items;       // This ensures the calling function actually receives the data
-    } else {
-      console.log("No matching items found");
-      return [];                  // Return an empty array instead of leaving it undefined
-    }
-  } catch (err) {
-    console.error("Wix Data Query Error:", err);
-    throw err;                    // Bubble the error up so your UI can handle it if needed
-  }
-}
-
-
