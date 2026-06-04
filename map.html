@@ -354,14 +354,15 @@
       }
       h1 { font-size: 15px; }
       .subtitle { display: none; } /* hide subtitle to maximise map space */
-      .controls { gap: 6px; }
-      button { padding: 7px 12px; font-size: 11px; }
-      .region-filter { gap: 6px; }
+      .controls { gap: 6px; width: 100%; display: flex; justify-content: space-between; }
+      button { flex: 1 1 auto; padding: 7px 10px; font-size: 11px; text-align: center; }
+      .region-filter { width: 100%; gap: 6px; display: flex; }
       .region-filter select {
-        flex: 1 1 100px;
-        min-width: 100px;
+        flex: 1 1 50%;
+        min-width: 0;
         font-size: 11px;
-        padding: 7px 28px 7px 8px;
+        padding: 7px 20px 7px 8px;
+        background-position: right 8px center;
       }
     }
 
@@ -371,6 +372,142 @@
       h1 { font-size: 13px; }
       button { padding: 6px 10px; font-size: 10px; }
       .region-filter select { font-size: 10px; padding: 6px 24px 6px 7px; }
+    }
+
+    /* ── Hide Attribution ── */
+    .maplibregl-ctrl-attrib, .mapboxgl-ctrl-attrib {
+      display: none !important;
+    }
+
+    /* ── Premium Popup Card Design ── */
+    .premium-popup-card {
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg-white);
+      font-family: 'Inter', sans-serif;
+      box-shadow: var(--shadow-medium);
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    .popup-img-container {
+      position: relative;
+      width: 100%;
+      height: 130px;
+      overflow: hidden;
+      background: #f7f7f7;
+    }
+    .popup-img-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    .premium-popup-card:hover .popup-img-container img {
+      transform: scale(1.05);
+    }
+    .popup-image-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%);
+      pointer-events: none;
+    }
+    .popup-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-left: 4px solid var(--primary-red);
+    }
+    .popup-title-link {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dark);
+      text-decoration: none;
+      line-height: 1.3;
+      transition: color 0.2s ease;
+      display: inline-block;
+    }
+    .popup-title-link:hover {
+      color: var(--primary-red);
+      text-decoration: underline;
+    }
+    .popup-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 4px;
+    }
+    .popup-meta-item {
+      font-size: 11px;
+      color: var(--text-gray);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .popup-meta-item.country {
+      color: var(--primary-red);
+      font-weight: 600;
+    }
+    .popup-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-light);
+      padding-top: 8px;
+    }
+    .popup-action-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .popup-action-btn.maps-btn {
+      background: var(--primary-red-light);
+      color: var(--primary-red);
+    }
+    .popup-action-btn.maps-btn:hover {
+      background: var(--primary-red);
+      color: white;
+    }
+    .popup-action-btn.tour-btn {
+      background: #f1f3f5;
+      color: #495057;
+    }
+    .popup-action-btn.tour-btn:hover {
+      background: #e9ecef;
+      color: #212529;
+    }
+
+    /* ── Map Footer Link ── */
+    .map-footer {
+      padding: 12px;
+      text-align: center;
+      border-top: 1px solid var(--border-light);
+      background: #fafafa;
+      flex-shrink: 0;
+    }
+    .explore-centers {
+      color: var(--primary-red);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      transition: color 0.2s;
+    }
+    .explore-centers:hover {
+      color: #930022;
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -388,15 +525,31 @@
       <div class="header">
         <div class="header-title-container">
           <h1 id="title">Global Spiritual &amp; Charitable Centres</h1>
-          <p class="subtitle" id="subtitle">Click a country marker or use the buttons to navigate.</p>
+          <p class="subtitle" id="subtitle">Click any country marker, or use the India button, to explore regions.</p>
         </div>
         <div class="controls">
           <button id="btn-world" onclick="showWorld()">World View</button>
           <button id="btn-india" onclick="showIndia()">India View</button>
+          <div id="controls-sep" class="controls-separator"></div>
+          <div id="region-filter" class="region-filter">
+            <select id="zone-select" onchange="onZoneSelect(this.value)">
+              <option value="">All Zones</option>
+              <option value="North India">North India</option>
+              <option value="South India">South India</option>
+              <option value="East India">East India</option>
+              <option value="West India">West India</option>
+            </select>
+            <select id="state-select" onchange="onStateSelect(this.value)">
+              <option value="">All States</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <div id="map"></div>
+      <div class="map-footer">
+        <a href="/temple-map-page" class="explore-centers" data-navigate="/temple-map-page">Explore Centers</a>
+      </div>
     </div>
   </div>
 
@@ -432,12 +585,12 @@
     // Each state gets a unique pastel hue, reused cyclically.
     // ─────────────────────────────────────────────
     const STATE_COLORS = [
-      '#A8D8A8','#FFD580','#F4A261','#74C0FC','#C77DFF',
-      '#F28B82','#90E0EF','#B7E4C7','#FFC8A2','#D0BFFF',
-      '#FFB347','#87CEEB','#98FB98','#DDA0DD','#F0E68C',
-      '#ADD8E6','#FFA07A','#90EE90','#E6B3CC','#B0E0E6',
-      '#FFDAB9','#C8E6C9','#FFE082','#B3E5FC','#F8BBD9',
-      '#DCEDC8','#FFE0B2','#E1BEE7','#B2EBF2','#F9A8D4'
+      '#51cf66', '#fcc419', '#ff922b', '#339af0', '#cc5de8',
+      '#ff6b6b', '#20c997', '#94d82d', '#f06595', '#845ef7',
+      '#ff922b', '#4dabf7', '#38d9a9', '#da77f2', '#ffd43b',
+      '#74c0fc', '#ff8787', '#63e6be', '#e599f7', '#a9e34b',
+      '#ffd8a8', '#c0eb75', '#ffe066', '#a5d8ff', '#fcc2d7',
+      '#d8f5a2', '#ffe8cc', '#eebefa', '#99e9f2', '#ffc9c9'
     ];
 
     // Build a deterministic colour map: state name → colour
@@ -523,10 +676,10 @@
       style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
       center: [0, 20],
       zoom: getResponsiveZoom(1.1),
-      dragRotate: false,
-      pitchWithRotate: false,
-      touchZoomRotate: false,
-      maxPitch: 0,
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchZoomRotate: true,
+      maxPitch: 75,
       attributionControl: false
     });
 
@@ -587,6 +740,19 @@
 
     const templePlaceholderSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='140' viewBox='0 0 260 140'%3E%3Crect width='260' height='140' fill='%23fdf5f7'/%3E%3Cpolygon points='130,22 108,74 152,74' fill='%23C2002F' opacity='0.6'/%3E%3Crect x='108' y='74' width='44' height='38' fill='%23C2002F' opacity='0.4'/%3E%3Crect x='122' y='94' width='16' height='18' rx='8' fill='%23C2002F' opacity='0.5'/%3E%3Ctext x='130' y='134' text-anchor='middle' font-family='Inter,sans-serif' font-size='9' fill='%23C2002F' opacity='0.45'%3ENo Image Available%3C/text%3E%3C/svg%3E`;
 
+    let cachedWorldGeoJson = null;
+    async function fetchWorldGeoJson() {
+      if (cachedWorldGeoJson) return cachedWorldGeoJson;
+      try {
+        const res = await fetch('https://openlayers.org/en/v6.0.1/examples/data/geojson/countries.geojson');
+        cachedWorldGeoJson = await res.json();
+        return cachedWorldGeoJson;
+      } catch(e) {
+        console.warn('Failed to fetch World countries GeoJSON:', e);
+        return null;
+      }
+    }
+
     // ─────────────────────────────────────────────
     // GeoJSON FETCH (cached)
     // ─────────────────────────────────────────────
@@ -605,13 +771,76 @@
     // ─────────────────────────────────────────────
     // MAP LOAD – add layers once GeoJSON is ready
     // ─────────────────────────────────────────────
-    map.on('load', () => {
+    map.on('load', async () => {
       mapLoaded = true;
       hideLoadingScreen();
+
+      // Fetch and setup World boundaries
+      const worldGeo = await fetchWorldGeoJson();
+      if (worldGeo) {
+        // Pre-assign colorful indices
+        worldGeo.features.forEach((feature, i) => {
+          feature.properties.color = STATE_COLORS[i % STATE_COLORS.length];
+        });
+        addWorldCountryLayers(worldGeo);
+      }
+
+      // Fetch and setup India boundaries
+      const indiaGeo = await fetchStatesGeoJson();
+      if (indiaGeo) {
+        addIndiaStateLayers(indiaGeo);
+      }
     });
+
+    function addWorldCountryLayers(geoJson) {
+      if (map.getSource('world-countries')) return;
+
+      map.addSource('world-countries', { type: 'geojson', data: geoJson });
+
+      // World countries shadow layer
+      map.addLayer({
+        id: 'world-countries-shadow',
+        type: 'fill',
+        source: 'world-countries',
+        layout: { visibility: 'visible' },
+        paint: {
+          'fill-color': '#000000',
+          'fill-opacity': 0.12,
+          'fill-translate': [-5, 5]
+        }
+      });
+
+      // World countries colored fill
+      map.addLayer({
+        id: 'world-countries-fill',
+        type: 'fill',
+        source: 'world-countries',
+        layout: { visibility: 'visible' },
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.8
+        }
+      });
+
+      // World countries white border
+      map.addLayer({
+        id: 'world-countries-border',
+        type: 'line',
+        source: 'world-countries',
+        layout: { visibility: 'visible' },
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 1,
+          'line-opacity': 0.7
+        }
+      });
+
+      updateBoundariesVisibility();
+    }
 
     function addIndiaStateLayers(geoJson) {
       if (map.getSource('india-states')) return; // already added
+
 
       map.addSource('india-states', { type: 'geojson', data: geoJson });
 
@@ -622,41 +851,67 @@
       });
       matchExpr.push('#D0D0D0'); // default fallback
 
-      // Coloured fill for each state
+      // 3D Drop Shadow layer beneath states
+      map.addLayer({
+        id: 'india-states-shadow',
+        type: 'fill',
+        source: 'india-states',
+        layout: { visibility: 'none' },
+        paint: {
+          'fill-color': '#000000',
+          'fill-opacity': 0.15,
+          'fill-translate': [-6, 6] // translates left and down to create shadow offset
+        }
+      });
+
+      // Coloured flat fill for each state
       map.addLayer({
         id: 'india-states-fill',
         type: 'fill',
         source: 'india-states',
         layout: { visibility: 'none' },
-        paint: { 'fill-color': matchExpr, 'fill-opacity': 0.65 }
+        paint: {
+          'fill-color': matchExpr,
+          'fill-opacity': 0.85
+        }
       });
 
-      // Thin border between states
+      // White borders separating the states
       map.addLayer({
         id: 'india-states-border',
         type: 'line',
         source: 'india-states',
         layout: { visibility: 'none' },
-        paint: { 'line-color': '#ffffff', 'line-width': 1.2, 'line-opacity': 0.9 }
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 1.5,
+          'line-opacity': 0.8
+        }
       });
 
-      // Hover darkening
+      // Hover darkening layer
       map.addLayer({
         id: 'india-states-hover',
         type: 'fill',
         source: 'india-states',
         layout: { visibility: 'none' },
-        paint: { 'fill-color': '#000000', 'fill-opacity': 0.12 },
+        paint: {
+          'fill-color': '#000000',
+          'fill-opacity': 0.12
+        },
         filter: ['==', ['get','ST_NM'], '']
       });
 
-      // Selected state highlight (bright border)
+      // Selected state highlight line layer
       map.addLayer({
         id: 'india-states-selected-border',
         type: 'line',
         source: 'india-states',
         layout: { visibility: 'none' },
-        paint: { 'line-color': '#C2002F', 'line-width': 2.5 },
+        paint: {
+          'line-color': '#C2002F',
+          'line-width': 2.5
+        },
         filter: ['==', ['get','ST_NM'], '']
       });
 
@@ -738,12 +993,15 @@
 
     function updateBoundariesVisibility() {
       if (!mapLoaded) return;
-      const on = currentView === 'india' || currentView === 'region';
-      const vis = on ? 'visible' : 'none';
-      ['india-states-fill','india-states-border','india-states-hover','india-states-selected-border'].forEach(id => {
-        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+      const indiaOn = currentView === 'india' || currentView === 'region';
+      const worldOn = currentView === 'world' || currentView === 'country';
+
+      // Toggle India state layers
+      const indiaVis = indiaOn ? 'visible' : 'none';
+      ['india-states-shadow','india-states-fill','india-states-border','india-states-hover','india-states-selected-border'].forEach(id => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', indiaVis);
       });
-      if (on) {
+      if (indiaOn) {
         if (selectedState) {
           updateStateFilter('india-states-selected-border', selectedState);
         } else if (selectedZone) {
@@ -752,6 +1010,12 @@
           updateStateFilter('india-states-selected-border', '');
         }
       }
+
+      // Toggle World country layers
+      const worldVis = worldOn ? 'visible' : 'none';
+      ['world-countries-shadow','world-countries-fill','world-countries-border'].forEach(id => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', worldVis);
+      });
     }
 
     // ─────────────────────────────────────────────
@@ -820,7 +1084,7 @@
     // ─────────────────────────────────────────────
     function showWorld() {
       currentView = 'world';
-      map.flyTo({ center: [0, 20], zoom: getResponsiveZoom(1.1), duration: 1000 });
+      map.flyTo({ center: [0, 20], zoom: getResponsiveZoom(1.1), pitch: 0, bearing: 0, duration: 1000 });
       clearTempleLayer();
       renderCountryDots();
       updateBoundariesVisibility();
@@ -832,13 +1096,14 @@
 
     function showIndia() {
       currentView = 'india';
-      map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), duration: 1000 });
+      map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
       hideCountryDots();
       renderIndiaTemples();
       document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
       document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
       setActiveButton('btn-india');
-      showRegionFilter(false);
+      showRegionFilter(true);
+      populateStateDropdown();
     }
 
     function showCountryTemples(countryName) {
@@ -852,7 +1117,7 @@
         return;
       }
 
-      map.flyTo({ center: [coords[1], coords[0]], zoom: getResponsiveZoom(zoom), duration: 1000 });
+      map.flyTo({ center: [coords[1], coords[0]], zoom: getResponsiveZoom(zoom), pitch: 0, bearing: 0, duration: 1000 });
       hideCountryDots();
       renderTemplesForCountry(countryName);
 
@@ -898,23 +1163,33 @@
 
           const imgSrc = t.image || templePlaceholderSvg;
           const countryLine = (t.country && t.country.toLowerCase().trim() !== 'india')
-            ? `<div class="popup-text" style="font-weight:600;color:#C2002F;">${t.country}</div>` : '';
-          const regionLine = t.state ? `<div class="popup-text">${t.state}</div>` : '';
+            ? `<div class="popup-meta-item country">${t.country}</div>` : '';
+          const regionLine = t.state ? `<div class="popup-meta-item">${t.state}</div>` : '';
 
-          // Build popup HTML with clickable name (opens Google Maps short link if available)
+          // Build popup HTML with premium design card
           const safeLocation = t.locationUrl || '';
-          const popup = new maplibregl.Popup({ offset: [0,-38], maxWidth: '260px' }).setHTML(`
-            <img class="popup-image" src="${imgSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />
-            <div class="popup-body">
-              <div class="popup-title">
-                ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" data-external="true" style="color:inherit;text-decoration:none;border:none;outline:none;">${t.name}</a>` : `${t.name}` }
+          const popup = new maplibregl.Popup({ offset: [0,-38], maxWidth: '280px' }).setHTML(`
+            <div class="premium-popup-card">
+              <div class="popup-img-container">
+                <img src="${imgSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />
+                <div class="popup-image-overlay"></div>
               </div>
-              ${countryLine}${regionLine}
-              ${ safeLocation ? `<div style="margin-top:8px"><a href="${safeLocation}" target="_blank" rel="noopener noreferrer" data-external="true" style="color:#0077cc;font-weight:700;font-size:12px;border:none;outline:none;">Open in Google Maps</a></div>` : '' }
-              ${ t.tour ? `<div style="margin-top:6px"><a href="${t.tour}" target="_blank" rel="noopener noreferrer" data-external="true" style="color:#C2002F;font-weight:700;font-size:12px;border:none;outline:none;">Watch Tour</a></div>` : '' }
+              <div class="popup-body">
+                <div class="popup-title">
+                  ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-title-link">${t.name}</a>` : `<span style="font-family:'Playfair Display', serif; font-size:14px; font-weight:700; color:var(--text-dark);">${t.name}</span>` }
+                </div>
+                <div class="popup-meta">
+                  ${countryLine}
+                  ${regionLine}
+                </div>
+                <div class="popup-actions">
+                  ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-action-btn maps-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Map</a>` : '' }
+                  ${ t.tour ? `<a href="${t.tour}" target="_blank" rel="noopener noreferrer" class="popup-action-btn tour-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Tour</a>` : '' }
+                </div>
+              </div>
             </div>`);
 
-          const marker = new maplibregl.Marker({ element: el })
+          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(map);
@@ -989,8 +1264,8 @@
       populateStateDropdown();
 
       if (!zoneValue) {
-        map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), duration: 1000 });
-        renderTemplesForCountry('India');
+        map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
+        renderIndiaTemples();
         updateBoundariesVisibility();
         document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
         document.getElementById('subtitle').innerText = 'Filter by Zone or State, or click any state on the map.';
@@ -999,7 +1274,7 @@
 
       currentView = 'region';
       const preset = REGION_PRESETS[zoneValue.toLowerCase().trim()] || { center: INDIA_COORDS, zoom: INDIA_ZOOM };
-      map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), duration: 1000 });
+      map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), pitch: 0, bearing: 0, duration: 1000 });
       clearTempleLayer();
       renderTemplesList(templesData.filter(t =>
         t.country && t.country.toLowerCase().trim() === 'india' && getZoneForState(t.state) === zoneValue
@@ -1016,7 +1291,7 @@
       currentView = 'region';
       const preset = REGION_PRESETS[stateValue.toLowerCase().trim()];
       if (preset) {
-        map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), duration: 1000 });
+        map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), pitch: 0, bearing: 0, duration: 1000 });
       }
 
       clearTempleLayer();
@@ -1076,7 +1351,9 @@
       clearCountryLayer();
       clearTempleLayer();
 
-      // Ensure India country dot always exists
+      // Ensure state dropdown has values loaded initially
+      populateStateDropdown();
+
       // Hide loading screen once data arrives
       hideLoadingScreen();
 
@@ -1090,27 +1367,36 @@
     // Also notify on first load in case Wix sends data before map.on('load') fires
     window.parent.postMessage({ type: 'READY' }, '*');
 
-    // Forward internal navigation clicks to the parent page (Wix) so links inside
-    // the HTML component can navigate the site. Use: <a data-navigate="/temple-map-page">Explore Centers</a>
+    // Forward internal/external navigation clicks to the parent page (Wix) so links
+    // inside the HTML component navigate correctly outside the iframe.
     document.addEventListener('click', (ev) => {
       try {
         const anchor = ev.target.closest && ev.target.closest('a');
-        if (anchor && (anchor.target === '_blank' || anchor.hasAttribute('data-external'))) {
-          const href = anchor.getAttribute('href');
-          if (href) {
-            window.open(href, '_blank', 'noopener');
-            ev.preventDefault();
-            return;
-          }
+        if (!anchor) return;
+
+        const href = anchor.getAttribute('href') || anchor.dataset.navigate;
+        if (!href) return;
+
+        // Check if it's an external link or target="_blank"
+        const isExternal = anchor.target === '_blank' || 
+                           anchor.hasAttribute('data-external') || 
+                           href.startsWith('http://') || 
+                           href.startsWith('https://') ||
+                           href.includes('static.wixstatic.com');
+
+        if (isExternal) {
+          window.parent.postMessage({ type: 'EXTERNAL_URL', href }, '*');
+          // Try standard window.open as a fallback
+          window.open(href, '_blank', 'noopener');
+          ev.preventDefault();
+          return;
         }
 
-        const el = ev.target.closest && ev.target.closest('[data-navigate], .explore-centers, [data-explore-centers]');
-        if (!el) return;
-        const href = el.getAttribute('data-navigate') || el.getAttribute('href') || el.dataset.href || '/';
+        // Otherwise, treat as internal Wix navigation
         window.parent.postMessage({ type: 'NAVIGATE', href }, '*');
         ev.preventDefault();
       } catch (e) {
-        // ignore
+        console.error('Click tracking error:', e);
       }
     });
   </script>

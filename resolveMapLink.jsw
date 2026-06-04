@@ -26,15 +26,26 @@ async function resolveOne(shortUrl) {
     if (!shortUrl || typeof shortUrl !== 'string') return null;
 
     try {
-        // Race the fetch against a 3-second timeout
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 3000)
         );
 
-        const fetchPromise = fetch(shortUrl, { method: 'GET' });
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        // Try with manual redirect to get the location header immediately (faster and avoids page load/blocking)
+        const fetchPromiseManual = fetch(shortUrl, { method: 'GET', redirect: 'manual' });
+        const responseManual = await Promise.race([fetchPromiseManual, timeoutPromise]);
+        
+        if (responseManual.status >= 300 && responseManual.status < 400) {
+            const loc = responseManual.headers.get('location');
+            if (loc) {
+                const parsed = parseCoordsFromUrl(loc);
+                if (parsed) return parsed;
+            }
+        }
 
-        const finalUrl = response.url || '';
+        // Fallback to auto-redirect if manual didn't return a Location or coords
+        const fetchPromiseAuto = fetch(shortUrl, { method: 'GET' });
+        const responseAuto = await Promise.race([fetchPromiseAuto, timeoutPromise]);
+        const finalUrl = responseAuto.url || '';
         return parseCoordsFromUrl(finalUrl);
 
     } catch (err) {
@@ -49,10 +60,13 @@ async function resolveOne(shortUrl) {
  *   /@lat,lng,zoom  (most common share link)
  *   ?q=lat,lng
  *   ?ll=lat,lng
+ *   !3d[lat]!4d[lng]
+ *   General [lat],[lng] pattern anywhere in url
  */
 function parseCoordsFromUrl(url) {
     if (!url) return null;
 
+    // 1. Check common formats
     let match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
 
@@ -61,6 +75,19 @@ function parseCoordsFromUrl(url) {
 
     match = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+
+    match = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+
+    // 2. Generic fallback coordinate scanner: any lat/lng separated by comma
+    match = url.match(/(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+            return { lat, lng };
+        }
+    }
 
     console.warn(`Could not parse coordinates from URL: ${url}`);
     return null;
