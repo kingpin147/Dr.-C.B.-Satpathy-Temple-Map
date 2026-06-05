@@ -23,11 +23,11 @@
       --shadow-medium: 0 4px 20px rgba(0,0,0,0.12);
     }
 
+    /* Full Screen Setup */
     body, html {
       margin: 0;
       padding: 0;
       width: 100%;
-      min-height: 100%;
       height: 100%;
       font-family: 'Mr Eaves XL Mod OT', 'Inter', sans-serif;
       background: var(--bg-white);
@@ -39,16 +39,18 @@
       display: flex;
       flex-direction: column;
       width: 100%;
-      min-height: 100%;
       height: 100%;
       box-sizing: border-box;
       position: relative;
     }
 
-    /* ── Loading Overlay ── */
+    /* Loading Overlay styling */
     .loading-overlay {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: var(--bg-white);
       display: flex;
       justify-content: center;
@@ -56,11 +58,13 @@
       z-index: 9999;
       transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
     }
+
     .loading-overlay.fade-out {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
+
     .loading-container {
       text-align: center;
       display: flex;
@@ -68,6 +72,7 @@
       align-items: center;
       gap: 24px;
     }
+
     .spinner {
       width: 50px;
       height: 50px;
@@ -76,6 +81,7 @@
       border-top-color: var(--primary-red);
       animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
     }
+
     .loading-text {
       font-family: 'Playfair Display', serif;
       font-size: 20px;
@@ -84,86 +90,110 @@
       letter-spacing: 0.5px;
       animation: pulse 1.8s ease-in-out infinite;
     }
-    @keyframes spin  { to { transform: rotate(360deg); } }
-    @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
-    /* ── Panel / Header ── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
     .panel {
       display: flex;
       flex-direction: column;
       flex-grow: 1;
+      max-width: 100%;
       background: var(--bg-white);
       overflow: hidden;
-      min-height: 0;
     }
+
     .header {
-      padding: 20px 40px 16px;
+      padding: 40px 50px 30px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 20px;
       border-bottom: 1px solid var(--border-light);
       flex-shrink: 0;
     }
-    .header-title-container { flex: 1 1 300px; min-width: 0; }
+
+    .header-title-container {
+      flex: 1 1 450px;
+    }
+
     h1 {
       margin: 0;
       font-family: 'Mr Eaves XL Mod OT', sans-serif;
       font-weight: 700;
-      font-size: clamp(18px, 2.8vw, 40px);
+      font-size: clamp(28px, 4vw, 48px);
       color: var(--primary-red);
       letter-spacing: -0.5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
+
+
     .subtitle {
-      font-size: 13px;
-      line-height: 1.5;
-      margin: 6px 0 0;
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 12px 0 0;
       color: var(--text-gray);
     }
 
-    /* ── Controls ── */
     .controls {
       display: flex;
+      gap: 12px;
       flex-wrap: wrap;
-      gap: 8px;
       align-items: center;
-      flex-shrink: 0;
     }
+
     button {
       border: 1px solid var(--border-light);
       background: var(--bg-white);
       color: var(--text-dark);
       border-radius: 4px;
-      padding: 9px 20px;
+      padding: 10px 24px;
       cursor: pointer;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 14px;
       transition: all 0.2s ease;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      white-space: nowrap;
+      letter-spacing: 1px;
     }
-    button:hover  { background: var(--primary-red); color: white; border-color: var(--primary-red); }
-    button.active { background: var(--primary-red); color: white; border-color: var(--primary-red); }
 
-    /* ── Region Filter ── */
+    button:hover { 
+      background: var(--primary-red);
+      color: white;
+      border-color: var(--primary-red);
+    }
+
+    button.active {
+      background: var(--primary-red);
+      color: white;
+      border-color: var(--primary-red);
+    }
+
+    /* Region Filter Dropdown */
     .region-filter {
+      position: relative;
       opacity: 0;
       visibility: hidden;
       transform: translateY(-4px);
       transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
       pointer-events: none;
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px;
     }
+
     .region-filter.visible {
-      opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
     }
+
     .region-filter select {
       appearance: none;
       -webkit-appearance: none;
@@ -171,107 +201,133 @@
       background: var(--bg-white);
       color: var(--text-dark);
       border-radius: 4px;
-      padding: 9px 36px 9px 12px;
+      padding: 10px 40px 10px 14px;
       cursor: pointer;
       font-weight: 600;
       font-size: 13px;
       font-family: 'Inter', sans-serif;
       letter-spacing: 0.3px;
       transition: all 0.2s ease;
-      min-width: 150px;
-      max-width: 100%;
+      min-width: 180px;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23555' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 12px center;
+      background-position: right 14px center;
     }
-    .region-filter select:hover  { border-color: var(--primary-red); }
-    .region-filter select:focus  { outline: none; border-color: var(--primary-red); box-shadow: 0 0 0 3px var(--primary-red-light); }
+
+    .region-filter select:hover {
+      border-color: var(--primary-red);
+    }
+
+    .region-filter select:focus {
+      outline: none;
+      border-color: var(--primary-red);
+      box-shadow: 0 0 0 3px var(--primary-red-light);
+    }
+
+    /* Separator line between buttons and dropdown */
     .controls-separator {
-      width: 1px; height: 26px;
+      width: 1px;
+      height: 28px;
       background: var(--border-light);
       opacity: 0;
       transition: opacity 0.3s ease;
-      flex-shrink: 0;
     }
-    .controls-separator.visible { opacity: 1; }
 
-    /* ── Map ── */
+    .controls-separator.visible {
+      opacity: 1;
+    }
+
+    /* Map takes the remaining center space */
     #map {
-      flex: 1 1 0;
+      flex-grow: 1;
+      flex-shrink: 1;
+      flex-basis: 0;
       width: 100%;
-      height: 100%;
       min-height: 0;
-      min-width: 0;
+      background: #f5f5f5;
     }
 
-    /* ── Temple Marker ── */
+    /* ===== Custom Temple Marker (SVG Pin) ===== */
     .temple-marker {
       position: relative;
       width: 32px;
       height: 42px;
       cursor: pointer;
-      filter: drop-shadow(0 3px 6px rgba(194,0,47,0.4));
+      filter: drop-shadow(0 3px 6px rgba(194, 0, 47, 0.4));
       transition: transform 0.2s ease, filter 0.2s ease;
-      pointer-events: auto;
-      display: block;
-    }
-    .custom-pin {
-      position: relative;
-      cursor: pointer;
-      z-index: 1;
-      display: inline-block;
-      width: 32px;
-      height: 42px;
-      pointer-events: auto;
-    }
-    .temple-marker:hover {
-      transform: scale(1.2) translateY(-3px);
-      filter: drop-shadow(0 6px 12px rgba(194,0,47,0.6));
-    }
-    @keyframes markerDrop {
-      0%   { opacity: 0; transform: translateY(-20px) scale(0.6); }
-      60%  { transform: translateY(3px) scale(1.05); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .temple-marker.animate-in {
-      animation: markerDrop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
     }
 
-    /* ── Country Dot ── */
-    .country-dot { position: relative; width: 40px; height: 40px; cursor: pointer; }
+    .temple-marker:hover {
+      transform: scale(1.2) translateY(-3px);
+      filter: drop-shadow(0 6px 12px rgba(194, 0, 47, 0.6));
+    }
+
+    /* Marker entrance animation */
+    @keyframes markerDrop {
+      0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.6);
+      }
+      60% {
+        transform: translateY(3px) scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .temple-marker.animate-in {
+      animation: markerDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* ===== Country Dot Marker (World View) ===== */
+    .country-dot {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+    }
+
     .country-dot-inner {
-      width: 16px; height: 16px;
+      width: 16px;
+      height: 16px;
       background: var(--primary-red);
       border: 2.5px solid white;
       border-radius: 50%;
-      position: absolute; top: 50%; left: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -50%);
-      box-shadow: 0 2px 8px rgba(194,0,47,0.4);
+      box-shadow: 0 2px 8px rgba(194, 0, 47, 0.4);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
     .country-dot-pulse {
-      width: 32px; height: 32px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background: var(--primary-red);
       opacity: 0.12;
-      position: absolute; top: 50%; left: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -50%);
       animation: countryPulse 2.5s ease-in-out infinite;
     }
+
     .country-dot:hover .country-dot-inner {
-      transform: translate(-50%,-50%) scale(1.3);
-      box-shadow: 0 4px 14px rgba(194,0,47,0.6);
-    }
-    @keyframes countryPulse {
-      0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.12; }
-      50%      { transform: translate(-50%,-50%) scale(1.5); opacity: 0.04; }
+      transform: translate(-50%, -50%) scale(1.3);
+      box-shadow: 0 4px 14px rgba(194, 0, 47, 0.6);
     }
 
-    /* ── MapLibre nav controls – keep away from edge on mobile ── */
-    .maplibregl-ctrl-top-right {
-      top: 8px;
-      right: 8px;
+    @keyframes countryPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.12; }
+      50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.04; }
     }
+
+    /* Larger invisible hit area around each marker */
+    /* ===== MapLibre Popup Styles ===== */
     .maplibregl-popup-content {
       border-radius: 8px;
       box-shadow: var(--shadow-medium);
@@ -280,252 +336,156 @@
       overflow: hidden;
       font-family: 'Inter', sans-serif;
       background: var(--bg-white);
-      max-width: min(260px, 90vw) !important;
     }
+
     .maplibregl-popup-close-button {
-      color: var(--text-gray); font-size: 18px; padding: 6px 8px;
-      border: none; background: none; outline: none; transition: color 0.2s;
-    }
-    .maplibregl-popup-close-button:hover { color: var(--primary-red); }
-    .maplibregl-popup-tip { border-top-color: var(--bg-white) !important; border-bottom-color: var(--bg-white) !important; }
-
-    .popup-image { width: 100%; height: 140px; object-fit: cover; display: block; border-bottom: 1px solid var(--border-light); }
-    .popup-body  { padding: 12px 16px; border-left: 4px solid var(--primary-red); }
-    .popup-body a {
-      color: inherit;
-      text-decoration: none;
-      border: none;
-      outline: none;
-    }
-    .popup-body a:hover {
-      text-decoration: underline;
-    }
-    .popup-body a:focus {
-      outline: none;
-    }
-    .popup-title {
-      font-size: 12px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1px; font-family: 'Mr Eaves XL Mod OT', sans-serif;
-      color: var(--primary-red) !important; margin-bottom: 4px; line-height: 1.4;
-    }
-    .popup-text { font-size: 11px; color: var(--text-gray); letter-spacing: 0.5px; font-family: 'Mr Eaves XL Mod OT', sans-serif; }
-
-    .country-popup-body   { padding: 14px 18px; text-align: center; }
-    .country-popup-name   { font-size: 14px; font-weight: 700; color: var(--primary-red); font-family: 'Mr Eaves XL Mod OT', sans-serif; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
-    .country-popup-cta    { font-size: 11px; color: var(--text-muted); letter-spacing: 0.3px; }
-
-    /* ── Responsive: Tablet (≤1024px) ── */
-    @media (max-width: 1024px) {
-      .header {
-        padding: 14px 20px 12px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-      .header-title-container { flex: none; width: 100%; }
-      h1 { font-size: 18px; white-space: normal; }
-      .subtitle { font-size: 12px; margin: 4px 0 0; }
-      .controls {
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .controls-separator { display: none; }
-      button { padding: 8px 14px; font-size: 12px; letter-spacing: 0.5px; }
-      .region-filter {
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .region-filter select {
-        flex: 1 1 120px;
-        min-width: 120px;
-        font-size: 12px;
-        padding: 8px 32px 8px 10px;
-      }
-    }
-
-    /* ── Responsive: Mobile (≤640px) ── */
-    @media (max-width: 640px) {
-      .header {
-        padding: 10px 12px 10px;
-        gap: 8px;
-      }
-      h1 { font-size: 15px; }
-      .subtitle { display: none; } /* hide subtitle to maximise map space */
-      .controls { gap: 6px; width: 100%; display: flex; justify-content: space-between; }
-      button { flex: 1 1 auto; padding: 7px 10px; font-size: 11px; text-align: center; }
-      .region-filter { width: 100%; gap: 6px; display: flex; }
-      .region-filter select {
-        flex: 1 1 50%;
-        min-width: 0;
-        font-size: 11px;
-        padding: 7px 20px 7px 8px;
-        background-position: right 8px center;
-      }
-    }
-
-    /* ── Responsive: Small mobile (≤380px) ── */
-    @media (max-width: 380px) {
-      .header { padding: 8px 10px; }
-      h1 { font-size: 13px; }
-      button { padding: 6px 10px; font-size: 10px; }
-      .region-filter select { font-size: 10px; padding: 6px 24px 6px 7px; }
-    }
-
-    /* ── Hide Attribution ── */
-    .maplibregl-ctrl-attrib, .mapboxgl-ctrl-attrib {
-      display: none !important;
-    }
-
-    /* ── Premium Popup Card Design ── */
-    .premium-popup-card {
-      border-radius: 12px;
-      overflow: hidden;
-      background: var(--bg-white);
-      font-family: 'Inter', sans-serif;
-      box-shadow: var(--shadow-medium);
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-    }
-    .popup-img-container {
-      position: relative;
-      width: 100%;
-      height: 130px;
-      overflow: hidden;
-      background: #f7f7f7;
-    }
-    .popup-img-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-    .premium-popup-card:hover .popup-img-container img {
-      transform: scale(1.05);
-    }
-    .popup-image-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%);
-      pointer-events: none;
-    }
-    .popup-body {
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      border-left: 4px solid var(--primary-red);
-    }
-    .popup-title-link {
-      font-family: 'Playfair Display', serif;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-dark);
-      text-decoration: none;
-      line-height: 1.3;
-      transition: color 0.2s ease;
-      display: inline-block;
-    }
-    .popup-title-link:hover {
-      color: var(--primary-red);
-      text-decoration: underline;
-    }
-    .popup-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      margin-bottom: 4px;
-    }
-    .popup-meta-item {
-      font-size: 11px;
       color: var(--text-gray);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .popup-meta-item.country {
-      color: var(--primary-red);
-      font-weight: 600;
-    }
-    .popup-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 4px;
-      border-top: 1px solid var(--border-light);
-      padding-top: 8px;
-    }
-    .popup-action-btn {
-      flex: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+      font-size: 18px;
       padding: 6px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .popup-action-btn.maps-btn {
-      background: var(--primary-red-light);
-      color: var(--primary-red);
-    }
-    .popup-action-btn.maps-btn:hover {
-      background: var(--primary-red);
-      color: white;
-    }
-    .popup-action-btn.tour-btn {
-      background: #f1f3f5;
-      color: #495057;
-    }
-    .popup-action-btn.tour-btn:hover {
-      background: #e9ecef;
-      color: #212529;
-    }
-
-    /* ── Map Footer Link ── */
-    .map-footer {
-      padding: 12px;
-      text-align: center;
-      border-top: 1px solid var(--border-light);
-      background: #fafafa;
-      flex-shrink: 0;
-    }
-    .explore-centers {
-      color: var(--primary-red);
-      font-weight: 700;
-      text-decoration: none;
-      font-size: 14px;
-      letter-spacing: 0.5px;
+      border: none;
+      background: none;
+      outline: none;
       transition: color 0.2s;
     }
-    .explore-centers:hover {
-      color: #930022;
-      text-decoration: underline;
+
+    .maplibregl-popup-close-button:hover {
+      color: var(--primary-red);
     }
+
+    .maplibregl-popup-tip {
+      border-top-color: var(--bg-white) !important;
+      border-bottom-color: var(--bg-white) !important;
+    }
+
+    /* Popup image */
+    .popup-image {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    /* Text section below image */
+    .popup-body {
+      padding: 12px 16px;
+      border-left: 4px solid var(--primary-red);
+    }
+
+    .popup-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'Mr Eaves XL Mod OT', sans-serif;
+      color: var(--primary-red) !important;
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .popup-text {
+      font-size: 11px;
+      color: var(--text-gray);
+      letter-spacing: 0.5px;
+      font-family: 'Mr Eaves XL Mod OT', sans-serif;
+    }
+
+    .popup-directions {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      padding: 5px 10px;
+      background: var(--primary-red-light);
+      color: var(--primary-red);
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      border-radius: 4px;
+      letter-spacing: 0.3px;
+      transition: background 0.2s ease;
+    }
+
+    .popup-directions:hover {
+      background: rgba(194, 0, 47, 0.15);
+    }
+
+    .popup-directions svg {
+      flex-shrink: 0;
+    }
+
+    /* Country popup (simpler) */
+    .country-popup-body {
+      padding: 14px 18px;
+      text-align: center;
+    }
+
+    .country-popup-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary-red);
+      font-family: 'Mr Eaves XL Mod OT', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 4px;
+    }
+
+    .country-popup-cta {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+
+
+    .footer-note {
+      padding: 20px 50px;
+      background: #fafafa;
+      font-size: 13px;
+      color: #999;
+      border-top: 1px solid var(--border-light);
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    /* Mobile & Tablet Responsive Adjustments */
+    @media (max-width: 1024px) {
+      .header { padding: 24px 16px 18px; flex-direction: column; align-items: flex-start; gap: 14px; }
+      .footer-note { padding: 15px 20px; }
+      h1 { font-size: 26px; }
+      .subtitle { font-size: 14px; margin: 6px 0 0; }
+      .controls { gap: 8px; }
+      button { padding: 8px 16px; font-size: 12px; }
+      .region-filter select { min-width: 150px; font-size: 12px; padding: 8px 36px 8px 12px; }
+      .controls-separator { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .header { padding: 18px 12px 14px; }
+      h1 { font-size: 22px; }
+      .controls { width: 100%; }
+      .region-filter { flex-direction: column; width: 100%; gap: 8px; }
+      .region-filter select { width: 100%; min-width: unset; }
+    }
+
   </style>
 </head>
 <body>
-  <div class="page">
 
+  <div class="page">
+    <!-- Beautiful Loading Overlay -->
     <div id="loading-screen" class="loading-overlay">
       <div class="loading-container">
         <div class="spinner"></div>
-        <div class="loading-text">Locations are loading…</div>
+        <div class="loading-text">Locations are loading...</div>
       </div>
     </div>
 
     <div class="panel">
       <div class="header">
         <div class="header-title-container">
-          <h1 id="title">Global Spiritual &amp; Charitable Centres</h1>
-          <p class="subtitle" id="subtitle">Click any country marker, or use the India button, to explore regions.</p>
+          <h1 id="title">Global Spiritual & Charitable Centres</h1>
+          <p class="subtitle" id="subtitle">Click India markers or use the buttons to navigate.</p>
         </div>
         <div class="controls">
           <button id="btn-world" onclick="showWorld()">World View</button>
@@ -547,32 +507,45 @@
       </div>
 
       <div id="map"></div>
-      <div class="map-footer">
-        <a href="/temple-map-page" class="explore-centers" data-navigate="/temple-map-page">Explore Centers</a>
-      </div>
+
+      
     </div>
   </div>
 
   <script>
-    // ─────────────────────────────────────────────
-    // SVG GENERATORS
-    // ─────────────────────────────────────────────
+    // ===== SVG Icon Generators =====
+
+    /**
+     * Creates a temple dome pin SVG for individual temple markers.
+     * Teardrop pin shape with a temple dome silhouette inside.
+     */
     function createTemplePinSvg() {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42" class="temple-marker animate-in">
+        <!-- Pin body -->
         <path d="M16 40C16 40 30 24 30 14C30 6.268 23.732 0 16 0C8.268 0 2 6.268 2 14C2 24 16 40 16 40Z" fill="#C2002F"/>
         <path d="M16 38C16 38 28 23 28 14C28 7.373 22.627 2 16 2C9.373 2 4 7.373 4 14C4 23 16 38 16 38Z" fill="#A30028"/>
+        <!-- White inner circle -->
         <circle cx="16" cy="14" r="10" fill="white" opacity="0.95"/>
-        <g transform="translate(9,6.5)" fill="#C2002F">
-          <path d="M7 0.5C7 0.5 4.5 5 4 7L10 7C9.5 5 7 0.5 7 0.5Z" opacity="0.9"/>
+        <!-- Temple dome silhouette -->
+        <g transform="translate(9, 6.5)" fill="#C2002F">
+          <!-- Main dome (shikhara) -->
+          <path d="M7 0.5 C7 0.5 4.5 5 4 7 L10 7 C9.5 5 7 0.5 7 0.5Z" opacity="0.9"/>
+          <!-- Kalash (top ornament) -->
           <line x1="7" y1="0" x2="7" y2="1.5" stroke="#C2002F" stroke-width="0.8" stroke-linecap="round"/>
+          <!-- Temple body -->
           <rect x="3.5" y="7" width="7" height="5" rx="0.3" opacity="0.75"/>
+          <!-- Entrance arch -->
           <rect x="5.5" y="9" width="3" height="3" rx="1.5" fill="white" opacity="0.8"/>
+          <!-- Base steps -->
           <rect x="2" y="12" width="10" height="1.5" rx="0.3" opacity="0.6"/>
           <rect x="1" y="13.5" width="12" height="1" rx="0.3" opacity="0.4"/>
         </g>
       </svg>`;
     }
 
+    /**
+     * Creates a country dot marker for world view.
+     */
     function createCountryDotHtml() {
       return `<div class="country-dot">
         <div class="country-dot-pulse"></div>
@@ -580,45 +553,9 @@
       </div>`;
     }
 
-    // ─────────────────────────────────────────────
-    // STATE COLOUR PALETTE  (matches reference image)
-    // Each state gets a unique pastel hue, reused cyclically.
-    // ─────────────────────────────────────────────
-    const STATE_COLORS = [
-      '#51cf66', '#fcc419', '#ff922b', '#339af0', '#cc5de8',
-      '#ff6b6b', '#20c997', '#94d82d', '#f06595', '#845ef7',
-      '#ff922b', '#4dabf7', '#38d9a9', '#da77f2', '#ffd43b',
-      '#74c0fc', '#ff8787', '#63e6be', '#e599f7', '#a9e34b',
-      '#ffd8a8', '#c0eb75', '#ffe066', '#a5d8ff', '#fcc2d7',
-      '#d8f5a2', '#ffe8cc', '#eebefa', '#99e9f2', '#ffc9c9'
-    ];
-
-    // Build a deterministic colour map: state name → colour
-    const STATE_NAMES_ORDERED = [
-      'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh',
-      'Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand',
-      'Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur',
-      'Meghalaya','Mizoram','Nagaland','Odisha','Punjab',
-      'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura',
-      'Uttar Pradesh','Uttarakhand','West Bengal',
-      'Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu',
-      'Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry'
-    ];
-
-    const STATE_COLOR_MAP = {};
-    STATE_NAMES_ORDERED.forEach((s, i) => {
-      STATE_COLOR_MAP[s.toLowerCase()] = STATE_COLORS[i % STATE_COLORS.length];
-    });
-
-    function getStateColor(stateName) {
-      if (!stateName) return '#D0D0D0';
-      return STATE_COLOR_MAP[stateName.toLowerCase().trim()] || '#D0D0D0';
-    }
-
-    // ─────────────────────────────────────────────
-    // REGION ZOOM PRESETS
-    // ─────────────────────────────────────────────
+    // ===== Region Zoom Presets =====
     const REGION_PRESETS = {
+      // North India
       "haryana":            { center: [29.0588, 76.0856], zoom: 8 },
       "new delhi & ncr":    { center: [28.6139, 77.2090], zoom: 10 },
       "delhi":              { center: [28.6139, 77.2090], zoom: 10 },
@@ -628,7 +565,9 @@
       "himachal pradesh":   { center: [31.1048, 77.1734], zoom: 8 },
       "jammu & kashmir":    { center: [33.7782, 76.5762], zoom: 7 },
       "rajasthan":          { center: [27.0238, 74.2179], zoom: 7 },
-      "north india":        { center: [28.5,   78.0],     zoom: 6 },
+      "north india":        { center: [28.5, 78.0],       zoom: 6 },
+
+      // East India
       "assam":              { center: [26.2006, 92.9376], zoom: 7 },
       "west bengal":        { center: [22.9868, 87.8550], zoom: 7 },
       "odisha":             { center: [20.9517, 85.0985], zoom: 7 },
@@ -641,367 +580,480 @@
       "mizoram":            { center: [23.1645, 92.9376], zoom: 8 },
       "arunachal pradesh":  { center: [28.2180, 94.7278], zoom: 7 },
       "sikkim":             { center: [27.5330, 88.5122], zoom: 9 },
-      "east india":         { center: [22.0,   84.0],     zoom: 6 },
+      "east india":         { center: [22.0, 84.0],       zoom: 6 },
+
+      // South India
       "tamil nadu":         { center: [11.1271, 78.6569], zoom: 7 },
       "karnataka":          { center: [15.3173, 75.7139], zoom: 7 },
       "kerala":             { center: [10.8505, 76.2711], zoom: 8 },
       "andhra pradesh":     { center: [15.9129, 79.7400], zoom: 7 },
       "telangana":          { center: [18.1124, 79.0193], zoom: 7 },
-      "south india":        { center: [12.0,   78.0],     zoom: 6 },
+      "south india":        { center: [12.0, 78.0],       zoom: 6 },
+
+      // West India
       "maharashtra":        { center: [19.7515, 75.7139], zoom: 7 },
       "gujarat":            { center: [22.2587, 71.1924], zoom: 7 },
       "goa":                { center: [15.2993, 74.1240], zoom: 9 },
       "madhya pradesh":     { center: [22.9734, 78.6569], zoom: 7 },
       "chhattisgarh":       { center: [21.2787, 81.8661], zoom: 7 },
-      "west india":         { center: [22.0,   72.0],     zoom: 6 },
+      "west india":         { center: [22.0, 72.0],       zoom: 6 },
     };
 
-    // ─────────────────────────────────────────────
-    // RESPONSIVE ZOOM
-    // ─────────────────────────────────────────────
+    // ===== Responsive Zoom Level Helper =====
     function getResponsiveZoom(zoom) {
-      const w = window.innerWidth;
-      if (w <= 480) return Math.max(1, zoom - 1.2);
-      if (w <= 768) return Math.max(1, zoom - 0.7);
-      if (w <= 1024) return Math.max(1, zoom - 0.3);
+      const width = window.innerWidth;
+      if (width <= 480) {
+        return Math.max(1, zoom - 1.2);
+      } else if (width <= 768) {
+        return Math.max(1, zoom - 0.7);
+      } else if (width <= 1024) {
+        return Math.max(1, zoom - 0.3);
+      }
       return zoom;
     }
 
-    // ─────────────────────────────────────────────
-    // MAP INIT  – use a clean light basemap so our
-    // coloured state fills are prominent
-    // ─────────────────────────────────────────────
+    // ===== Map Initialization =====
     const map = new maplibregl.Map({
       container: 'map',
-      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-      center: [0, 20],
-      zoom: getResponsiveZoom(1.1),
-      dragRotate: true,
-      pitchWithRotate: true,
-      touchZoomRotate: true,
-      maxPitch: 75,
-      attributionControl: false
+      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+      center: [78.6569, 22.9734], // [lng, lat]
+      zoom: getResponsiveZoom(2),
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchZoomRotate: false
     });
 
+    // Add zoom controls
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
-    // Ensure map resizes when the container changes size
-    function resizeMap() {
-      if (map && typeof map.resize === 'function') {
-        map.resize();
-      }
+    function invalidateSize() {
+      map.resize();
     }
 
-    window.addEventListener('resize', resizeMap);
-    if (typeof ResizeObserver === 'function') {
-      const containerObserver = new ResizeObserver(resizeMap);
-      containerObserver.observe(document.documentElement);
-    }
+    // Dynamic data references
+    let countriesData = [];
+    let templesData = [];
+    let regionsData = [];
+    let dataReceived = false;
+    let currentView = 'world'; // 'world', 'india', 'region'
+    let countryMarkers = [];
+    let templeMarkers = [];
+    let mapLoaded = false;
 
-    const WORLD_ZOOM_THRESHOLD = 3.3;
-    const INDIA_ZOOM_THRESHOLD = 4.8;
-    const INDIA_BOUNDS = {
-      minLng: 68, maxLng: 98,
-      minLat: 6,  maxLat: 36
-    };
-    function isCenterInsideIndia() {
-      const center = map.getCenter();
-      return center.lng >= INDIA_BOUNDS.minLng && center.lng <= INDIA_BOUNDS.maxLng && center.lat >= INDIA_BOUNDS.minLat && center.lat <= INDIA_BOUNDS.maxLat;
-    }
-    map.on('moveend', () => {
-      const zoom = map.getZoom();
-      if (zoom <= WORLD_ZOOM_THRESHOLD && currentView !== 'world') {
-        showWorld();
-      } else if (zoom >= INDIA_ZOOM_THRESHOLD && currentView !== 'india' && isCenterInsideIndia()) {
-        showIndia();
-      }
-    });
-
-    // ─────────────────────────────────────────────
-    // STATE
-    // ─────────────────────────────────────────────
-    let countriesData   = [];
-    let templesData     = [];
-    let dataReceived    = false;
-    let currentView     = 'world';
-    let countryMarkers  = [];
-    let templeMarkers   = [];
-    let mapLoaded       = false;
-    let selectedZone    = '';
-    let selectedState   = '';
-    let allIndiaStates  = [];
-    let stateInfoPopup  = null;
-
-    // GeoJSON cache — fetched once, reused every time India view is triggered
-    let cachedStatesGeoJson = null;
-
+    // India hardcoded fallback
     const INDIA_COORDS = [22.9734, 78.6569];
     const INDIA_ZOOM   = 5;
 
-    const templePlaceholderSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='140' viewBox='0 0 260 140'%3E%3Crect width='260' height='140' fill='%23fdf5f7'/%3E%3Cpolygon points='130,22 108,74 152,74' fill='%23C2002F' opacity='0.6'/%3E%3Crect x='108' y='74' width='44' height='38' fill='%23C2002F' opacity='0.4'/%3E%3Crect x='122' y='94' width='16' height='18' rx='8' fill='%23C2002F' opacity='0.5'/%3E%3Ctext x='130' y='134' text-anchor='middle' font-family='Inter,sans-serif' font-size='9' fill='%23C2002F' opacity='0.45'%3ENo Image Available%3C/text%3E%3C/svg%3E`;
+    // ===== Inline SVG Placeholder for missing images =====
+    const templePlaceholderSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='140' viewBox='0 0 260 140'%3E%3Crect width='260' height='140' fill='%23fdf5f7'/%3E%3Crect x='30' y='112' width='200' height='10' fill='%23C2002F' opacity='0.12'/%3E%3Cpolygon points='130,22 108,74 152,74' fill='%23C2002F' opacity='0.6'/%3E%3Crect x='108' y='74' width='44' height='38' fill='%23C2002F' opacity='0.4'/%3E%3Cpolygon points='78,42 62,76 94,76' fill='%23C2002F' opacity='0.35'/%3E%3Crect x='64' y='76' width='28' height='36' fill='%23C2002F' opacity='0.22'/%3E%3Cpolygon points='182,42 166,76 198,76' fill='%23C2002F' opacity='0.35'/%3E%3Crect x='168' y='76' width='28' height='36' fill='%23C2002F' opacity='0.22'/%3E%3Crect x='122' y='94' width='16' height='18' rx='8' fill='%23C2002F' opacity='0.5'/%3E%3Ctext x='130' y='134' text-anchor='middle' font-family='Inter,sans-serif' font-size='9' fill='%23C2002F' opacity='0.45'%3ENo Image Available%3C/text%3E%3C/svg%3E`;
 
-    // ─────────────────────────────────────────────
-    // GeoJSON FETCH (cached)
-    // ─────────────────────────────────────────────
-    async function fetchStatesGeoJson() {
-      if (cachedStatesGeoJson) return cachedStatesGeoJson;
-      try {
-        const res = await fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson');
-        cachedStatesGeoJson = await res.json();
-        return cachedStatesGeoJson;
-      } catch(e) {
-        console.warn('Failed to fetch India states GeoJSON:', e);
-        return null;
-      }
-    }
-
-    // ─────────────────────────────────────────────
-    // MAP LOAD – add layers once GeoJSON is ready
-    // ─────────────────────────────────────────────
+    // ===== MapLibre Source and Layer Configuration =====
     map.on('load', () => {
       mapLoaded = true;
-      hideLoadingScreen();
-    });
 
-    function addIndiaStateLayers(geoJson) {
-      if (map.getSource('india-states')) return; // already added
-
-      map.addSource('india-states', { type: 'geojson', data: geoJson });
-
-      // Build a match expression: state name → unique colour
-      const matchExpr = ['match', ['downcase', ['coalesce', ['get','ST_NM'], ['get','NAME_1'], ['get','name'], '']]];
-      STATE_NAMES_ORDERED.forEach((name, i) => {
-        matchExpr.push(name.toLowerCase(), STATE_COLORS[i % STATE_COLORS.length]);
-      });
-      matchExpr.push('#D0D0D0'); // default fallback
-
-      // 3D Drop Shadow layer beneath states
-      map.addLayer({
-        id: 'india-states-shadow',
-        type: 'fill',
-        source: 'india-states',
-        layout: { visibility: 'none' },
-        paint: {
-          'fill-color': '#000000',
-          'fill-opacity': 0.15,
-          'fill-translate': [-6, 6] // translates left and down to create shadow offset
-        }
+      // Add India states GeoJSON source
+      map.addSource('india-states', {
+        type: 'geojson',
+        data: 'https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson'
       });
 
-      // Coloured flat fill for each state
+      // Base fill layer for India states
       map.addLayer({
         id: 'india-states-fill',
         type: 'fill',
         source: 'india-states',
-        layout: { visibility: 'none' },
+        layout: {
+          'visibility': 'none'
+        },
         paint: {
-          'fill-color': matchExpr,
-          'fill-opacity': 0.85
+          'fill-color': '#C2002F',
+          'fill-opacity': 0.02
         }
       });
 
-      // White borders separating the states
-      map.addLayer({
-        id: 'india-states-border',
-        type: 'line',
-        source: 'india-states',
-        layout: { visibility: 'none' },
-        paint: {
-          'line-color': '#ffffff',
-          'line-width': 1.5,
-          'line-opacity': 0.8
-        }
-      });
-
-      // Hover darkening layer
+      // Hover fill layer
       map.addLayer({
         id: 'india-states-hover',
         type: 'fill',
         source: 'india-states',
-        layout: { visibility: 'none' },
+        layout: {
+          'visibility': 'none'
+        },
         paint: {
-          'fill-color': '#000000',
+          'fill-color': '#C2002F',
           'fill-opacity': 0.12
         },
-        filter: ['==', ['get','ST_NM'], '']
+        filter: ['==', ['get', 'ST_NM'], '']
       });
 
-      // Selected state highlight line layer
+      // Selected fill layer
+      map.addLayer({
+        id: 'india-states-selected',
+        type: 'fill',
+        source: 'india-states',
+        layout: {
+          'visibility': 'none'
+        },
+        paint: {
+          'fill-color': '#C2002F',
+          'fill-opacity': 0.2
+        },
+        filter: ['==', ['get', 'ST_NM'], '']
+      });
+
+      // Selected border layer
       map.addLayer({
         id: 'india-states-selected-border',
         type: 'line',
         source: 'india-states',
-        layout: { visibility: 'none' },
+        layout: {
+          'visibility': 'none'
+        },
         paint: {
           'line-color': '#C2002F',
           'line-width': 2.5
         },
-        filter: ['==', ['get','ST_NM'], '']
+        filter: ['==', ['get', 'ST_NM'], '']
       });
 
-      // Mouse interactions
+      // Hover interaction on states
       map.on('mousemove', 'india-states-fill', (e) => {
         if (e.features.length > 0) {
           map.getCanvas().style.cursor = 'pointer';
-          updateStateFilter('india-states-hover', getStateName(e.features[0].properties));
+          const properties = e.features[0].properties;
+          const stateName = getStateName(properties);
+          updateStateHighlightFilter('india-states-hover', stateName);
         }
       });
+
       map.on('mouseleave', 'india-states-fill', () => {
         map.getCanvas().style.cursor = '';
-        updateStateFilter('india-states-hover', '');
+        updateStateHighlightFilter('india-states-hover', '');
       });
+
+      // Click interaction on states
       map.on('click', 'india-states-fill', (e) => {
         if (e.features.length > 0) {
-          const name = getStateName(e.features[0].properties);
-          if (name) {
-            const sel = document.getElementById('state-select');
-            for (let i = 0; i < sel.options.length; i++) {
-              if (sel.options[i].value.toLowerCase().trim() === name.toLowerCase().trim()) {
-                sel.selectedIndex = i;
-                onStateSelect(sel.options[i].value);
+          const properties = e.features[0].properties;
+          const stateName = getStateName(properties);
+          if (stateName) {
+            const stateSelect = document.getElementById('state-select');
+            for (let i = 0; i < stateSelect.options.length; i++) {
+              if (stateSelect.options[i].value.toLowerCase().trim() === stateName.toLowerCase().trim()) {
+                stateSelect.selectedIndex = i;
+                onStateSelect(stateSelect.options[i].value);
                 break;
               }
             }
-            if (stateInfoPopup) {
-              stateInfoPopup.remove();
-            }
-            stateInfoPopup = new maplibregl.Popup({ offset: [0, -30], closeOnClick: true })
-              .setLngLat(e.lngLat)
-              .setHTML(`<div style="padding:10px 14px; font-size:14px; font-weight:700; color:#C2002F; text-align:center; background:#ffffff; border-radius:8px; border:1px solid #eee;">${name}</div>`)
-              .addTo(map);
           }
         }
       });
 
-      // Apply current visibility
       updateBoundariesVisibility();
-    }
+    });
 
-    function getStateName(props) {
-      if (!props) return '';
-      return props.ST_NM || props.NAME_1 || props.state_name || props.name || '';
-    }
-
-    function updateStateFilter(layerId, stateName) {
-      if (!mapLoaded || !map.getLayer(layerId)) return;
-      if (!stateName) {
-        map.setFilter(layerId, ['==', ['get','ST_NM'], '']);
-        return;
-      }
-      const n = stateName.toLowerCase().trim();
-      map.setFilter(layerId, ['any',
-        ['==', ['downcase', ['coalesce', ['get','ST_NM'],    '']], n],
-        ['==', ['downcase', ['coalesce', ['get','NAME_1'],   '']], n],
-        ['==', ['downcase', ['coalesce', ['get','state_name'],'']], n],
-        ['==', ['downcase', ['coalesce', ['get','name'],     '']], n]
-      ]);
-    }
-
-    function updateZoneFilter(layerId, zoneName) {
-      if (!mapLoaded || !map.getLayer(layerId)) return;
-      if (!zoneName) { updateStateFilter(layerId, ''); return; }
-      const states = allIndiaStates.filter(s => getZoneForState(s) === zoneName);
-      if (!states.length) { updateStateFilter(layerId, ''); return; }
-      const conds = ['any'];
-      states.forEach(s => {
-        const n = s.toLowerCase().trim();
-        conds.push(
-          ['==', ['downcase', ['coalesce', ['get','ST_NM'],    '']], n],
-          ['==', ['downcase', ['coalesce', ['get','NAME_1'],   '']], n],
-          ['==', ['downcase', ['coalesce', ['get','state_name'],'']], n],
-          ['==', ['downcase', ['coalesce', ['get','name'],     '']], n]
-        );
-      });
-      map.setFilter(layerId, conds);
+    function getStateName(properties) {
+      if (!properties) return "";
+      return properties.ST_NM || properties.NAME_1 || properties.state_name || properties.name || "";
     }
 
     function updateBoundariesVisibility() {
       if (!mapLoaded) return;
-      const on = currentView === 'india' || currentView === 'region';
-      const vis = on ? 'visible' : 'none';
-      ['india-states-shadow','india-states-fill','india-states-border','india-states-hover','india-states-selected-border'].forEach(id => {
-        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+      
+      const isIndiaActive = currentView === 'india' || currentView === 'region';
+      const visibility = isIndiaActive ? 'visible' : 'none';
+      
+      ['india-states-fill', 'india-states-hover', 'india-states-selected', 'india-states-selected-border'].forEach(id => {
+        if (map.getLayer(id)) {
+          map.setLayoutProperty(id, 'visibility', visibility);
+        }
       });
-      if (on) {
+
+      if (isIndiaActive) {
         if (selectedState) {
-          updateStateFilter('india-states-selected-border', selectedState);
+          updateStateHighlightFilter('india-states-selected', selectedState);
+          updateStateHighlightFilter('india-states-selected-border', selectedState);
         } else if (selectedZone) {
-          updateZoneFilter('india-states-selected-border', selectedZone);
+          updateZoneHighlightFilter('india-states-selected', selectedZone);
+          updateStateHighlightFilter('india-states-selected-border', '');
         } else {
-          updateStateFilter('india-states-selected-border', '');
+          updateStateHighlightFilter('india-states-selected', '');
+          updateStateHighlightFilter('india-states-selected-border', '');
         }
       }
     }
 
-    // ─────────────────────────────────────────────
-    // ZONE → STATE MAPPING
-    // ─────────────────────────────────────────────
+    function updateStateHighlightFilter(layerId, stateName) {
+      if (!mapLoaded || !map.getLayer(layerId)) return;
+      if (!stateName) {
+        map.setFilter(layerId, ['==', ['get', 'ST_NM'], '']);
+        return;
+      }
+      const normName = stateName.toLowerCase().trim();
+      map.setFilter(layerId, [
+        'any',
+        ['==', ['downcase', ['coalesce', ['get', 'ST_NM'], '']], normName],
+        ['==', ['downcase', ['coalesce', ['get', 'NAME_1'], '']], normName],
+        ['==', ['downcase', ['coalesce', ['get', 'state_name'], '']], normName],
+        ['==', ['downcase', ['coalesce', ['get', 'name'], '']], normName]
+      ]);
+    }
+
+    function updateZoneHighlightFilter(layerId, zoneName) {
+      if (!mapLoaded || !map.getLayer(layerId)) return;
+      if (!zoneName) {
+        map.setFilter(layerId, ['==', ['get', 'ST_NM'], '']);
+        return;
+      }
+      
+      const statesInZone = allIndiaStates.filter(state => getZoneForState(state) === zoneName);
+      if (statesInZone.length === 0) {
+        map.setFilter(layerId, ['==', ['get', 'ST_NM'], '']);
+        return;
+      }
+      
+      const filterConditions = ['any'];
+      statesInZone.forEach(stateName => {
+        const normName = stateName.toLowerCase().trim();
+        filterConditions.push(
+          ['==', ['downcase', ['coalesce', ['get', 'ST_NM'], '']], normName],
+          ['==', ['downcase', ['coalesce', ['get', 'NAME_1'], '']], normName],
+          ['==', ['downcase', ['coalesce', ['get', 'state_name'], '']], normName],
+          ['==', ['downcase', ['coalesce', ['get', 'name'], '']], normName]
+        );
+      });
+      
+      map.setFilter(layerId, filterConditions);
+    }
+
+    // Map of states/regions to broad India zones
     const STATE_ZONE_MAPPING = {
-      "haryana":"North India","punjab":"North India","himachal pradesh":"North India",
-      "jammu & kashmir":"North India","rajasthan":"North India","uttar pradesh":"North India",
-      "uttarakhand":"North India","delhi":"North India","new delhi & ncr":"North India","chandigarh":"North India",
-      "tamil nadu":"South India","karnataka":"South India","kerala":"South India",
-      "andhra pradesh":"South India","telangana":"South India","puducherry":"South India",
-      "assam":"East India","west bengal":"East India","odisha":"East India","bihar":"East India",
-      "jharkhand":"East India","meghalaya":"East India","manipur":"East India","nagaland":"East India",
-      "tripura":"East India","mizoram":"East India","arunachal pradesh":"East India","sikkim":"East India",
-      "maharashtra":"West India","gujarat":"West India","goa":"West India",
-      "madhya pradesh":"West India","chhattisgarh":"West India"
+      // North India
+      "haryana": "North India",
+      "punjab": "North India",
+      "himachal pradesh": "North India",
+      "jammu & kashmir": "North India",
+      "rajasthan": "North India",
+      "uttar pradesh": "North India",
+      "uttarakhand": "North India",
+      "delhi": "North India",
+      "new delhi & ncr": "North India",
+      "chandigarh": "North India",
+
+      // South India
+      "tamil nadu": "South India",
+      "karnataka": "South India",
+      "kerala": "South India",
+      "andhra pradesh": "South India",
+      "telangana": "South India",
+      "puducherry": "South India",
+
+      // East India
+      "assam": "East India",
+      "west bengal": "East India",
+      "odisha": "East India",
+      "bihar": "East India",
+      "jharkhand": "East India",
+      "meghalaya": "East India",
+      "manipur": "East India",
+      "nagaland": "East India",
+      "tripura": "East India",
+      "mizoram": "East India",
+      "arunachal pradesh": "East India",
+      "sikkim": "East India",
+
+      // West India
+      "maharashtra": "West India",
+      "gujarat": "West India",
+      "goa": "West India",
+      "madhya pradesh": "West India",
+      "chhattisgarh": "West India"
     };
 
-    function getZoneForState(s) {
-      if (!s) return '';
-      const n = s.toLowerCase().trim();
-      if (n === 'north india') return 'North India';
-      if (n === 'south india') return 'South India';
-      if (n === 'east india')  return 'East India';
-      if (n === 'west india')  return 'West India';
-      return STATE_ZONE_MAPPING[n] || 'North India';
+    function getZoneForState(stateName) {
+      if (!stateName) return "";
+      const normalized = stateName.toLowerCase().trim();
+      if (normalized === "north india" || normalized === "south india" || normalized === "east india" || normalized === "west india") {
+        if (normalized === "north india") return "North India";
+        if (normalized === "south india") return "South India";
+        if (normalized === "east india") return "East India";
+        if (normalized === "west india") return "West India";
+      }
+      return STATE_ZONE_MAPPING[normalized] || "North India";
     }
 
-    // ─────────────────────────────────────────────
-    // LOADING SCREEN
-    // ─────────────────────────────────────────────
-    let loadingHidden = false;
-    function hideLoadingScreen() {
-      if (loadingHidden) return;
-      loadingHidden = true;
-      const el = document.getElementById('loading-screen');
-      if (el) el.classList.add('fade-out');
-    }
+    // ===== Navigation Functions =====
 
-    // ─────────────────────────────────────────────
-    // NAVIGATION HELPERS
-    // ─────────────────────────────────────────────
-    function setActiveButton(id) {
-      ['btn-world','btn-india'].forEach(b => document.getElementById(b).classList.remove('active'));
-      if (id) document.getElementById(id).classList.add('active');
-    }
-
-    function showRegionFilter(show) {
-      const f = document.getElementById('region-filter');
-      const s = document.getElementById('controls-sep');
-      if (!f || !s) return;
-      if (show) {
-        f.classList.add('visible'); s.classList.add('visible');
-      } else {
-        f.classList.remove('visible'); s.classList.remove('visible');
-        const zone = document.getElementById('zone-select');
-        const state = document.getElementById('state-select');
-        if (zone) zone.value = '';
-        if (state) state.value = '';
-        selectedZone = ''; selectedState = '';
+    function setActiveButton(activeId) {
+      ['btn-world', 'btn-india'].forEach(id => {
+        document.getElementById(id).classList.remove('active');
+      });
+      if (activeId) {
+        document.getElementById(activeId).classList.add('active');
       }
     }
 
-    // ─────────────────────────────────────────────
-    // VIEWS
-    // ─────────────────────────────────────────────
+    function showRegionFilter(show) {
+      const filter = document.getElementById('region-filter');
+      const sep = document.getElementById('controls-sep');
+      if (show) {
+        filter.classList.add('visible');
+        sep.classList.add('visible');
+      } else {
+        filter.classList.remove('visible');
+        sep.classList.remove('visible');
+        // Reset selections
+        document.getElementById('zone-select').value = '';
+        document.getElementById('state-select').value = '';
+        selectedZone = "";
+        selectedState = "";
+      }
+    }
+
+    let selectedZone = "";
+    let selectedState = "";
+    let allIndiaStates = [];
+
+    function showIndia() {
+      currentView = 'india';
+      selectedZone = "";
+      selectedState = "";
+      document.getElementById('zone-select').value = "";
+      populateStateDropdown();
+
+      map.flyTo({
+        center: [INDIA_COORDS[1], INDIA_COORDS[0]],
+        zoom: getResponsiveZoom(INDIA_ZOOM),
+        duration: 1200
+      });
+
+      renderTemplesForCountry('India');
+      updateBoundariesVisibility();
+      document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
+      document.getElementById('subtitle').innerText = 'Filter by Zone or State to explore specific areas.';
+      setActiveButton('btn-india');
+      showRegionFilter(true);
+    }
+
+    function showCountryTemples(countryName) {
+      const key = countryName.toLowerCase().trim();
+
+      // Use DB coords
+      const dbCountry = countriesData.find(c => c.name.toLowerCase().trim() === key);
+
+      // Only India gets a hardcoded fallback
+      const fallbackCoords = key === 'india' ? INDIA_COORDS : [22, 20];
+      const fallbackZoom   = key === 'india' ? INDIA_ZOOM   : 4;
+
+      const coords = (dbCountry && dbCountry.coords) || fallbackCoords;
+      const zoom   = (dbCountry && dbCountry.zoom)   || fallbackZoom;
+
+      map.flyTo({
+        center: [coords[1], coords[0]],
+        zoom: getResponsiveZoom(zoom),
+        duration: 1200
+      });
+
+      renderTemplesForCountry(countryName);
+
+      if (key === 'india') {
+        currentView = 'india';
+        updateBoundariesVisibility();
+        document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
+        document.getElementById('subtitle').innerText = 'Filter by Zone or State to explore specific areas.';
+        setActiveButton('btn-india');
+        showRegionFilter(true);
+      } else {
+        currentView = 'country';
+        updateBoundariesVisibility();
+        document.getElementById('title').innerText = `Spiritual & Charitable Centres — ${countryName}`;
+        document.getElementById('subtitle').innerText = `Markers are now visible across ${countryName}.`;
+        setActiveButton(null);
+        showRegionFilter(false);
+      }
+    }
+
+    function renderTemplesForCountry(countryName, regionFilter) {
+      clearTempleLayer();
+      const normalized = countryName.toLowerCase().trim();
+      let filteredTemples = templesData.filter(t => t.country && t.country.toLowerCase().trim() === normalized);
+
+      // Apply region filter if specified
+      if (regionFilter) {
+        const regionKey = regionFilter.toLowerCase().trim();
+        filteredTemples = filteredTemples.filter(t => t.state && t.state.toLowerCase().trim() === regionKey);
+      }
+      
+      renderTemplesList(filteredTemples);
+    }
+
+    function clearTempleLayer() {
+      templeMarkers.forEach(m => m.remove());
+      templeMarkers = [];
+    }
+
+    function clearCountryLayer() {
+      countryMarkers.forEach(m => m.remove());
+      countryMarkers = [];
+    }
+
+    function renderTemplesList(filteredTemples) {
+      filteredTemples.forEach((t, index) => {
+        if (!t.coords || t.coords.length < 2) return;
+        const lat = parseFloat(t.coords[0]);
+        const lng = parseFloat(t.coords[1]);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const el = document.createElement('div');
+        el.className = 'custom-pin';
+        el.innerHTML = `<div style="animation-delay: ${index * 0.08}s">${createTemplePinSvg()}</div>`;
+
+        // Build popup HTML — use actual image or SVG placeholder
+        const imageSrc = t.image ? t.image : templePlaceholderSvg;
+        const imageHtml = `<img class="popup-image" src="${imageSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />`;
+
+        // Show country if not India
+        const countryLine = (t.country && t.country.toLowerCase().trim() !== 'india')
+          ? `<div class="popup-text" style="font-weight: 600; color: #C2002F;">${t.country}</div>`
+          : '';
+
+        // Show region/state if available
+        const regionLine = t.state
+          ? `<div class="popup-text">${t.state}</div>`
+          : '';
+
+        const popupHtml = `
+          ${imageHtml}
+          <div class="popup-body">
+            <div class="popup-title">${t.name}</div>
+            ${countryLine}
+            ${regionLine}
+          </div>`;
+
+        const popup = new maplibregl.Popup({ offset: [0, -38], maxWidth: '260px' }).setHTML(popupHtml);
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+          .addTo(map);
+
+        templeMarkers.push(marker);
+      });
+    }
+
+    function renderAllTemples() {
+      clearTempleLayer();
+      renderTemplesList(templesData);
+    }
+
     function showWorld() {
       currentView = 'world';
-      map.flyTo({ center: [0, 20], zoom: getResponsiveZoom(1.1), pitch: 0, bearing: 0, duration: 1000 });
-      clearTempleLayer();
-      renderCountryDots();
+      map.flyTo({
+        center: [20, 22],
+        zoom: getResponsiveZoom(2),
+        duration: 1200
+      });
+      renderAllTemples();
       updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
       document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
@@ -1009,139 +1061,153 @@
       showRegionFilter(false);
     }
 
-    function showIndia() {
-      currentView = 'india';
-      map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
-      hideCountryDots();
-      renderIndiaTemples();
-      document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
-      document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
-      setActiveButton('btn-india');
-      showRegionFilter(true);
+    // ===== Dual Dropdown Handlers =====
+    function onZoneSelect(zoneValue) {
+      selectedZone = zoneValue;
+      selectedState = ""; // Reset state when zone changes
       populateStateDropdown();
-    }
 
-    function showCountryTemples(countryName) {
-      const key = countryName.toLowerCase().trim();
-      const db  = countriesData.find(c => c.name.toLowerCase().trim() === key);
-      const coords = (db && db.coords) || (key === 'india' ? INDIA_COORDS : [22, 20]);
-      const zoom   = (db && db.zoom)   || (key === 'india' ? INDIA_ZOOM   : 4);
-
-      if (key === 'india') {
-        showIndia();
+      if (!zoneValue) {
+        // "All Zones" selected — show all India temples
+        map.flyTo({
+          center: [INDIA_COORDS[1], INDIA_COORDS[0]],
+          zoom: getResponsiveZoom(INDIA_ZOOM),
+          duration: 1200
+        });
+        renderTemplesForCountry('India');
+        updateBoundariesVisibility();
+        document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
+        document.getElementById('subtitle').innerText = 'Filter by Zone or State to explore specific areas.';
         return;
       }
 
-      map.flyTo({ center: [coords[1], coords[0]], zoom: getResponsiveZoom(zoom), pitch: 0, bearing: 0, duration: 1000 });
-      hideCountryDots();
-      renderTemplesForCountry(countryName);
+      currentView = 'region';
+      const zoneKey = zoneValue.toLowerCase().trim();
+      const preset = REGION_PRESETS[zoneKey] || { center: INDIA_COORDS, zoom: INDIA_ZOOM };
+      map.flyTo({
+        center: [preset.center[1], preset.center[0]],
+        zoom: getResponsiveZoom(preset.zoom),
+        duration: 1200
+      });
 
-      currentView = 'country';
+      renderTemplesForZone(zoneValue);
       updateBoundariesVisibility();
-      document.getElementById('title').innerText = `Spiritual & Charitable Centres — ${countryName}`;
-      document.getElementById('subtitle').innerText = `Markers are now visible across ${countryName}.`;
-      setActiveButton(null);
-      showRegionFilter(false);
+
+      document.getElementById('title').innerText = `Centres in ${zoneValue}`;
+      document.getElementById('subtitle').innerText = `Showing temples in ${zoneValue}, India.`;
     }
 
-    // ─────────────────────────────────────────────
-    // MARKER RENDERING  (performance-optimised)
-    // Uses requestAnimationFrame batching to avoid
-    // long frames when adding many DOM markers.
-    // ─────────────────────────────────────────────
-    function clearTempleLayer() {
-      templeMarkers.forEach(m => m.remove());
-      templeMarkers = [];
-    }
-    function clearCountryLayer() {
-      countryMarkers.forEach(m => m.remove());
-      countryMarkers = [];
-    }
+    function onStateSelect(stateValue) {
+      selectedState = stateValue;
 
-    function renderTemplesList(list) {
-      // Batch DOM marker creation with rAF to keep the UI responsive
-      const BATCH = 30;
-      let i = 0;
-
-      function addBatch() {
-        const end = Math.min(i + BATCH, list.length);
-        for (; i < end; i++) {
-          const t = list[i];
-          if (!t.coords || t.coords.length < 2) continue;
-          const lat = parseFloat(t.coords[0]);
-          const lng = parseFloat(t.coords[1]);
-          if (isNaN(lat) || isNaN(lng)) continue;
-
-          const el = document.createElement('div');
-          el.className = 'custom-pin';
-          el.innerHTML = `<div style="animation-delay:${(i % BATCH) * 0.05}s">${createTemplePinSvg()}</div>`;
-
-          const imgSrc = t.image || templePlaceholderSvg;
-          const countryLine = (t.country && t.country.toLowerCase().trim() !== 'india')
-            ? `<div class="popup-meta-item country">${t.country}</div>` : '';
-          const regionLine = t.state ? `<div class="popup-meta-item">${t.state}</div>` : '';
-
-          // Build popup HTML with premium design card
-          const safeLocation = t.locationUrl || '';
-          const popup = new maplibregl.Popup({ offset: [0,-38], maxWidth: '280px' }).setHTML(`
-            <div class="premium-popup-card">
-              <div class="popup-img-container">
-                <img src="${imgSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />
-                <div class="popup-image-overlay"></div>
-              </div>
-              <div class="popup-body">
-                <div class="popup-title">
-                  ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-title-link">${t.name}</a>` : `<span style="font-family:'Playfair Display', serif; font-size:14px; font-weight:700; color:var(--text-dark);">${t.name}</span>` }
-                </div>
-                <div class="popup-meta">
-                  ${countryLine}
-                  ${regionLine}
-                </div>
-                <div class="popup-actions">
-                  ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-action-btn maps-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Map</a>` : '' }
-                  ${ t.tour ? `<a href="${t.tour}" target="_blank" rel="noopener noreferrer" class="popup-action-btn tour-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Tour</a>` : '' }
-                </div>
-              </div>
-            </div>`);
-
-          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-            .setLngLat([lng, lat])
-            .setPopup(popup)
-            .addTo(map);
-          el.addEventListener('mouseenter', () => { el.style.zIndex = 999; });
-          el.addEventListener('mouseleave', () => { el.style.zIndex = 1; });
-          el.addEventListener('click', () => { el.style.zIndex = 999; });
-          templeMarkers.push(marker);
+      if (!stateValue) {
+        if (selectedZone) {
+          onZoneSelect(selectedZone);
+        } else {
+          onZoneSelect("");
         }
-        if (i < list.length) requestAnimationFrame(addBatch);
+        return;
       }
-      requestAnimationFrame(addBatch);
+
+      currentView = 'region';
+      const stateKey = stateValue.toLowerCase().trim();
+      const preset = REGION_PRESETS[stateKey];
+      if (preset) {
+        map.flyTo({
+          center: [preset.center[1], preset.center[0]],
+          zoom: getResponsiveZoom(preset.zoom),
+          duration: 1200
+        });
+      }
+
+      renderTemplesForState(stateValue);
+      updateBoundariesVisibility();
+
+      if (!preset) {
+        if (templeMarkers.length > 0) {
+          const bounds = new maplibregl.LngLatBounds();
+          templeMarkers.forEach(m => bounds.extend(m.getLngLat()));
+          map.fitBounds(bounds, { padding: 40, duration: 1200 });
+        }
+      }
+
+      document.getElementById('title').innerText = `Centres in ${stateValue}`;
+      document.getElementById('subtitle').innerText = `Showing temples in ${stateValue}, India.`;
     }
 
-    function renderTemplesForCountry(countryName, regionFilter) {
+    function renderTemplesForZone(zoneName) {
       clearTempleLayer();
-      const norm = countryName.toLowerCase().trim();
-      let filtered = templesData.filter(t => t.country && t.country.toLowerCase().trim() === norm);
-      if (regionFilter) {
-        const rk = regionFilter.toLowerCase().trim();
-        filtered = filtered.filter(t => t.state && t.state.toLowerCase().trim() === rk);
-      }
+      const filtered = templesData.filter(t => 
+        t.country && 
+        t.country.toLowerCase().trim() === 'india' && 
+        getZoneForState(t.state) === zoneName
+      );
       renderTemplesList(filtered);
     }
 
-    function renderWorldTemples() {
+    function renderTemplesForState(stateName) {
       clearTempleLayer();
-      renderTemplesList(templesData.filter(t => t.isWorld));
+      const filtered = templesData.filter(t => 
+        t.country && 
+        t.country.toLowerCase().trim() === 'india' && 
+        t.state && 
+        t.state.toLowerCase().trim() === stateName.toLowerCase().trim()
+      );
+      renderTemplesList(filtered);
     }
 
-    function renderIndiaTemples() {
-      clearTempleLayer();
-      renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'));
+    function populateStateDropdown() {
+      const select = document.getElementById('state-select');
+      while (select.options.length > 1) {
+        select.remove(1);
+      }
+
+      let filteredStates = allIndiaStates;
+      if (selectedZone) {
+        filteredStates = allIndiaStates.filter(state => getZoneForState(state) === selectedZone);
+      }
+
+      const sorted = [...filteredStates].sort((a, b) => a.localeCompare(b));
+      sorted.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state;
+        option.textContent = state;
+        select.appendChild(option);
+      });
+      select.value = selectedState;
     }
 
-    function renderCountryDots() {
+    // ===== Listen for data messages from Wix Velo =====
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (!message || message.type !== 'LOAD_DATA') return;
+
+      dataReceived = true;
+      countriesData = message.countries || [];
+      templesData = message.temples || [];
+
+      // Extract unique states in India from templesData
+      allIndiaStates = [...new Set(
+        templesData
+          .filter(t => t.country && t.country.toLowerCase().trim() === 'india' && t.state)
+          .map(t => t.state)
+      )];
+      
+      populateStateDropdown();
+
+      // Clear existing markers
       clearCountryLayer();
-      countriesData.forEach(c => {
+      clearTempleLayer();
+
+      // Always ensure India appears in world view — hardcoded, not from DB
+      const dbHasIndia = countriesData.some(c => c.name.toLowerCase().trim() === 'india');
+      const worldCountries = [...countriesData];
+      if (!dbHasIndia) {
+        worldCountries.push({ name: 'India', coords: INDIA_COORDS, zoom: INDIA_ZOOM });
+      }
+
+      // Render country dots (one per country)
+      worldCountries.forEach(c => {
         if (!c.coords || c.coords.length < 2) return;
         const lat = parseFloat(c.coords[0]);
         const lng = parseFloat(c.coords[1]);
@@ -1151,168 +1217,109 @@
         el.className = 'custom-pin';
         el.innerHTML = createCountryDotHtml();
 
-        const popup = new maplibregl.Popup({ offset: [0,-10] }).setHTML(`
-          <div class="country-popup-body">
+        const popupHtml = `<div class="country-popup-body">
             <div class="country-popup-name">${c.name}</div>
             <div class="country-popup-cta">Click to explore</div>
-          </div>`);
+          </div>`;
+
+        const popup = new maplibregl.Popup({ offset: [0, -10] }).setHTML(popupHtml);
 
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([lng, lat])
           .setPopup(popup)
           .addTo(map);
 
-        el.addEventListener('click', () => showCountryTemples(c.name));
+        el.addEventListener('click', () => {
+          showCountryTemples(c.name);
+        });
+
         countryMarkers.push(marker);
       });
-    }
 
-    function hideCountryDots() {
-      clearCountryLayer();
-    }
-
-    // ─────────────────────────────────────────────
-    // ZONE / STATE DROPDOWNS
-    // ─────────────────────────────────────────────
-    function onZoneSelect(zoneValue) {
-      selectedZone = zoneValue; selectedState = '';
-      populateStateDropdown();
-
-      if (!zoneValue) {
-        map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
-        renderIndiaTemples();
-        updateBoundariesVisibility();
-        document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
-        document.getElementById('subtitle').innerText = 'Filter by Zone or State, or click any state on the map.';
-        return;
-      }
-
-      currentView = 'region';
-      const preset = REGION_PRESETS[zoneValue.toLowerCase().trim()] || { center: INDIA_COORDS, zoom: INDIA_ZOOM };
-      map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), pitch: 0, bearing: 0, duration: 1000 });
-      clearTempleLayer();
-      renderTemplesList(templesData.filter(t =>
-        t.country && t.country.toLowerCase().trim() === 'india' && getZoneForState(t.state) === zoneValue
-      ));
-      updateBoundariesVisibility();
-      document.getElementById('title').innerText = `Centres in ${zoneValue}`;
-      document.getElementById('subtitle').innerText = `Showing centres in ${zoneValue}, India.`;
-    }
-
-    function onStateSelect(stateValue) {
-      selectedState = stateValue;
-      if (!stateValue) { onZoneSelect(selectedZone); return; }
-
-      currentView = 'region';
-      const preset = REGION_PRESETS[stateValue.toLowerCase().trim()];
-      if (preset) {
-        map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), pitch: 0, bearing: 0, duration: 1000 });
-      }
-
-      clearTempleLayer();
-      const filtered = templesData.filter(t =>
-        t.country && t.country.toLowerCase().trim() === 'india' &&
-        t.state && t.state.toLowerCase().trim() === stateValue.toLowerCase().trim()
-      );
-      renderTemplesList(filtered);
+      // Render all individual temple pins
+      renderAllTemples();
       updateBoundariesVisibility();
 
-      if (!preset && filtered.length > 0) {
-        // Fit to markers if no preset available
-        setTimeout(() => {
-          if (templeMarkers.length > 0) {
-            const bounds = new maplibregl.LngLatBounds();
-            templeMarkers.forEach(m => bounds.extend(m.getLngLat()));
-            map.fitBounds(bounds, { padding: 60, duration: 1000 });
-          }
-        }, 500);
+      // Hide loading overlay
+      const loader = document.getElementById('loading-screen');
+      if (loader) {
+        loader.classList.add('fade-out');
       }
 
-      document.getElementById('title').innerText = `Centres in ${stateValue}`;
-      document.getElementById('subtitle').innerText = `Showing centres in ${stateValue}, India.`;
-    }
+      // Set world view as active
+      setActiveButton('btn-world');
 
-    function populateStateDropdown() {
-      const sel = document.getElementById('state-select');
-      while (sel.options.length > 1) sel.remove(1);
-      let list = selectedZone
-        ? allIndiaStates.filter(s => getZoneForState(s) === selectedZone)
-        : allIndiaStates;
-      [...list].sort((a,b) => a.localeCompare(b)).forEach(s => {
-        const o = document.createElement('option');
-        o.value = o.textContent = s;
-        sel.appendChild(o);
-      });
-      sel.value = selectedState;
-    }
-
-    // ─────────────────────────────────────────────
-    // MESSAGE LISTENER  (receives data from Wix Velo)
-    // ─────────────────────────────────────────────
-    window.addEventListener('message', (event) => {
-      const msg = event.data;
-      if (!msg || msg.type !== 'LOAD_DATA') return;
-
-      dataReceived   = true;
-      countriesData  = msg.countries || [];
-      templesData    = msg.temples   || [];
-
-      allIndiaStates = [...new Set(
-        templesData
-          .filter(t => t.country && t.country.toLowerCase().trim() === 'india' && t.state)
-          .map(t => t.state)
-      )];
-
-      clearCountryLayer();
-      clearTempleLayer();
-
-      // Ensure state dropdown has values loaded initially
-      populateStateDropdown();
-
-      // Hide loading screen once data arrives
-      hideLoadingScreen();
-
-      // Show world view by default once data is loaded
-      showWorld();
-
-      // Notify the parent iframe that map is ready
-      window.parent.postMessage({ type: 'READY' }, '*');
+      // Re-invalidate map size after data loads to fix iframe rendering
+      setTimeout(() => invalidateSize(), 100);
     });
 
-    // Also notify on first load in case Wix sends data before map.on('load') fires
-    window.parent.postMessage({ type: 'READY' }, '*');
+    // ===== Fallback Mock Data Loader (for local testing/preview) =====
+    function loadMockData() {
+      if (dataReceived) return;
+      window.postMessage({
+        type: 'LOAD_DATA',
+        countries: [
+          { name: 'India', coords: [22.9734, 78.6569], zoom: 5 },
+          { name: 'USA', coords: [37.0902, -95.7129], zoom: 4 },
+          { name: 'Sri Lanka', coords: [7.8731, 80.7718], zoom: 7 },
+          { name: 'New Zealand', coords: [-40.9006, 174.8860], zoom: 5 }
+        ],
+        regions: ['Haryana', 'South India', 'East India', 'Assam', 'New Delhi & NCR'],
+        temples: [
+          { name: 'Sai Ka Aangan, Gurugram', state: 'Haryana', country: 'India', coords: [28.4595, 77.0266], image: '', isWorld: false, locationUrl: 'https://maps.app.goo.gl/qmQHGPqyDr123Bv68' },
+          { name: 'Shri Saipuram Shirdi Sai Baba Temple', state: 'South India', country: 'India', coords: [13.0827, 80.2707], image: '', isWorld: false, locationUrl: 'https://maps.app.goo.gl/qXxH62AosgbaWLdk6' },
+          { name: 'Shirdi Saibaba Temple, Bhubaneswar', state: 'East India', country: 'India', coords: [20.2961, 85.8245], image: '', isWorld: false, locationUrl: 'https://maps.app.goo.gl/FehC4n6oxivHF4sk7' },
+          { name: 'Shri Shirdi Sai Baba Mandir, Guwahati', state: 'Assam', country: 'India', coords: [26.1445, 91.7362], image: '', isWorld: false, locationUrl: 'https://maps.app.goo.gl/neYgFEjdu8DJVkLW8' },
+          { name: 'Sri Sai Mandir, Nagaon', state: 'Assam', country: 'India', coords: [26.3500, 92.6840], image: '', isWorld: false, locationUrl: 'https://maps.app.goo.gl/D9DF7SqqrRXNhVx1A' },
+          { name: 'Shirdi Saibaba Temple, Chattarpur', state: 'New Delhi & NCR', country: 'India', coords: [28.5076, 77.1735], image: '', isWorld: false, locationUrl: 'https://maps.app.goo.gl/hiabZ7yhWdUkNojk7' },
+          { name: 'Shri Shirdi Sai Temple, Chicago', state: 'USA', country: 'USA', coords: [41.8781, -87.6298], image: '', isWorld: true, locationUrl: 'https://maps.app.goo.gl/nky916KUkuR77jBNA' },
+          { name: 'Sri Saibaba Mandir, Minneapolis', state: 'USA', country: 'USA', coords: [44.8380, -93.6016], image: '', isWorld: true, locationUrl: 'https://maps.app.goo.gl/ponK3jUuLpgzbi8T7' },
+          { name: 'Shirdi Sai Baba Temple, Bellevue', state: 'USA', country: 'USA', coords: [47.6101, -122.2015], image: '', isWorld: true, locationUrl: 'https://maps.app.goo.gl/Hiuga1GuB4bcTJEL6' },
+          { name: 'Shri Shirdi SaiBaba\'s Mandir, Auckland', state: 'Auckland', country: 'New Zealand', coords: [-36.8485, 174.7633], image: '', isWorld: true, locationUrl: 'https://maps.app.goo.gl/Wvya7LoEtRRxjTs8A' },
+          { name: 'Sri Shirdi Sai Baba Ashram, Sri Lanka', state: 'Sri Lanka', country: 'Sri Lanka', coords: [7.8731, 80.7718], image: '', isWorld: true, locationUrl: 'https://maps.app.goo.gl/RaNqw73YcTsz7bxF7' }
+        ]
+      }, '*');
+    }
 
-    // Forward internal/external navigation clicks to the parent page (Wix) so links
-    // inside the HTML component navigate correctly outside the iframe.
-    document.addEventListener('click', (ev) => {
-      try {
-        const anchor = ev.target.closest && ev.target.closest('a');
-        if (!anchor) return;
+    // Notify Wix parent that iframe is ready to receive data
+    window.addEventListener('DOMContentLoaded', () => {
+      // Multiple invalidateSize calls to handle iframe rendering delays
+      [100, 300, 600, 1200].forEach(delay => {
+        setTimeout(() => invalidateSize(), delay);
+      });
 
-        const href = anchor.getAttribute('href') || anchor.dataset.navigate;
-        if (!href) return;
-
-        // Check if it's an external link or target="_blank"
-        const isExternal = anchor.target === '_blank' || 
-                           anchor.hasAttribute('data-external') || 
-                           href.startsWith('http://') || 
-                           href.startsWith('https://') ||
-                           href.includes('static.wixstatic.com');
-
-        if (isExternal) {
-          window.parent.postMessage({ type: 'EXTERNAL_URL', href }, '*');
-          // Try standard window.open as a fallback
-          window.open(href, '_blank', 'noopener');
-          ev.preventDefault();
-          return;
-        }
-
-        // Otherwise, treat as internal Wix navigation
-        window.parent.postMessage({ type: 'NAVIGATE', href }, '*');
-        ev.preventDefault();
-      } catch (e) {
-        console.error('Click tracking error:', e);
+      // Use ResizeObserver to automatically recalculate map dimensions on container size changes
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(() => {
+          invalidateSize();
+        });
+        resizeObserver.observe(document.getElementById('map'));
       }
+
+      // Notify parent we are ready
+      setTimeout(() => {
+        window.parent.postMessage({ type: 'READY' }, '*');
+      }, 200);
+
+      // Trigger mock data load if no response after 2.5 seconds
+      setTimeout(() => {
+        if (!dataReceived) {
+          console.log("No Wix parent detected. Loading fallback mock data...");
+          loadMockData();
+        }
+      }, 2500);
+    });
+
+    // Handle Resize — debounced to avoid excessive calls
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => invalidateSize(), 100);
+    });
+
+    // Also handle visibility changes (tab switching, iframe show/hide)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) invalidateSize();
     });
   </script>
 </body>

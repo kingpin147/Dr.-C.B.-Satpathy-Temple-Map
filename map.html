@@ -111,12 +111,11 @@
       margin: 0;
       font-family: 'Mr Eaves XL Mod OT', sans-serif;
       font-weight: 700;
-      font-size: clamp(18px, 2.8vw, 40px);
+      font-size: clamp(18px, 2.8vw, 36px);
       color: var(--primary-red);
       letter-spacing: -0.5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      word-wrap: break-word;
     }
     .subtitle {
       font-size: 13px;
@@ -547,9 +546,6 @@
       </div>
 
       <div id="map"></div>
-      <div class="map-footer">
-        <a href="/temple-map-page" class="explore-centers" data-navigate="/temple-map-page">Explore Centers</a>
-      </div>
     </div>
   </div>
 
@@ -673,9 +669,9 @@
     // ─────────────────────────────────────────────
     const map = new maplibregl.Map({
       container: 'map',
-      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-      center: [0, 20],
-      zoom: getResponsiveZoom(1.1),
+      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+      bounds: [[-130, -50], [130, 65]],
+      fitBoundsOptions: { padding: 20 },
       dragRotate: true,
       pitchWithRotate: true,
       touchZoomRotate: true,
@@ -704,16 +700,23 @@
       minLng: 68, maxLng: 98,
       minLat: 6,  maxLat: 36
     };
+    // Flag to skip moveend during programmatic flyTo animations
+    let isProgrammaticMove = false;
+
     function isCenterInsideIndia() {
       const center = map.getCenter();
       return center.lng >= INDIA_BOUNDS.minLng && center.lng <= INDIA_BOUNDS.maxLng && center.lat >= INDIA_BOUNDS.minLat && center.lat <= INDIA_BOUNDS.maxLat;
     }
+
     map.on('moveend', () => {
+      // Don't auto-switch when a button-triggered flyTo is in progress
+      if (isProgrammaticMove) return;
+
       const zoom = map.getZoom();
       if (zoom <= WORLD_ZOOM_THRESHOLD && currentView !== 'world') {
-        showWorld();
+        switchToWorldView();
       } else if (zoom >= INDIA_ZOOM_THRESHOLD && currentView !== 'india' && isCenterInsideIndia()) {
-        showIndia();
+        switchToIndiaView();
       }
     });
 
@@ -872,7 +875,29 @@
         layout: { visibility: 'none' },
         paint: {
           'fill-color': matchExpr,
-          'fill-opacity': 0.85
+          'fill-opacity': 0.45
+        }
+      });
+
+      // Explicit text labels for each state to ensure visibility
+      map.addLayer({
+        id: 'india-states-labels',
+        type: 'symbol',
+        source: 'india-states',
+        layout: {
+          'visibility': 'none',
+          'text-field': ['get', 'ST_NM'],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 11,
+          'text-transform': 'uppercase',
+          'text-letter-spacing': 0.1,
+          'text-anchor': 'center'
+        },
+        paint: {
+          'text-color': '#444444',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.5,
+          'text-halo-blur': 0.5
         }
       });
 
@@ -998,7 +1023,7 @@
 
       // Toggle India state layers
       const indiaVis = indiaOn ? 'visible' : 'none';
-      ['india-states-shadow','india-states-fill','india-states-border','india-states-hover','india-states-selected-border'].forEach(id => {
+      ['india-states-shadow','india-states-fill','india-states-labels','india-states-border','india-states-hover','india-states-selected-border'].forEach(id => {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', indiaVis);
       });
       if (indiaOn) {
@@ -1082,9 +1107,11 @@
     // ─────────────────────────────────────────────
     // VIEWS
     // ─────────────────────────────────────────────
-    function showWorld() {
+    // ── "Soft" view switches — used by automatic zoom-threshold detection ──
+    // These ONLY swap markers + UI. They do NOT move the camera, so pins
+    // stay glued to their geographic positions during manual zoom/pan.
+    function switchToWorldView() {
       currentView = 'world';
-      map.flyTo({ center: [0, 20], zoom: getResponsiveZoom(1.1), pitch: 0, bearing: 0, duration: 1000 });
       clearTempleLayer();
       renderCountryDots();
       updateBoundariesVisibility();
@@ -1094,16 +1121,47 @@
       showRegionFilter(false);
     }
 
-    function showIndia() {
+    function switchToIndiaView() {
       currentView = 'india';
-      map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
       hideCountryDots();
       renderIndiaTemples();
+      updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
       document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
       setActiveButton('btn-india');
       showRegionFilter(true);
       populateStateDropdown();
+    }
+
+    // ── "Full" view switches — used when user clicks buttons ──
+    // These fly the camera AND swap markers.
+    function showWorld() {
+      isProgrammaticMove = true;
+      currentView = 'world';
+      clearTempleLayer();
+      renderCountryDots();
+      updateBoundariesVisibility();
+      document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
+      document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
+      setActiveButton('btn-world');
+      showRegionFilter(false);
+      map.fitBounds([[-130, -50], [130, 65]], { padding: 20, duration: 1000 });
+      map.once('moveend', () => { isProgrammaticMove = false; });
+    }
+
+    function showIndia() {
+      isProgrammaticMove = true;
+      currentView = 'india';
+      hideCountryDots();
+      renderIndiaTemples();
+      updateBoundariesVisibility();
+      document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
+      document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
+      setActiveButton('btn-india');
+      showRegionFilter(true);
+      populateStateDropdown();
+      map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
+      map.once('moveend', () => { isProgrammaticMove = false; });
     }
 
     function showCountryTemples(countryName) {
@@ -1117,7 +1175,7 @@
         return;
       }
 
-      map.flyTo({ center: [coords[1], coords[0]], zoom: getResponsiveZoom(zoom), pitch: 0, bearing: 0, duration: 1000 });
+      isProgrammaticMove = true;
       hideCountryDots();
       renderTemplesForCountry(countryName);
 
@@ -1127,6 +1185,8 @@
       document.getElementById('subtitle').innerText = `Markers are now visible across ${countryName}.`;
       setActiveButton(null);
       showRegionFilter(false);
+      map.flyTo({ center: [coords[1], coords[0]], zoom: getResponsiveZoom(zoom), pitch: 0, bearing: 0, duration: 1000 });
+      map.once('moveend', () => { isProgrammaticMove = false; });
     }
 
     // ─────────────────────────────────────────────
@@ -1143,7 +1203,7 @@
       countryMarkers = [];
     }
 
-    function renderTemplesList(list) {
+    function renderTemplesList(list, skipAnimation) {
       // Batch DOM marker creation with rAF to keep the UI responsive
       const BATCH = 30;
       let i = 0;
@@ -1159,7 +1219,9 @@
 
           const el = document.createElement('div');
           el.className = 'custom-pin';
-          el.innerHTML = `<div style="animation-delay:${(i % BATCH) * 0.05}s">${createTemplePinSvg()}</div>`;
+          // Skip drop animation when auto-switching views so pins appear instantly
+          const pinSvg = skipAnimation ? createTemplePinSvg().replace('animate-in', '') : createTemplePinSvg();
+          el.innerHTML = `<div style="animation-delay:${(i % BATCH) * 0.05}s">${pinSvg}</div>`;
 
           const imgSrc = t.image || templePlaceholderSvg;
           const countryLine = (t.country && t.country.toLowerCase().trim() !== 'india')
@@ -1214,14 +1276,14 @@
       renderTemplesList(filtered);
     }
 
-    function renderWorldTemples() {
+    function renderWorldTemples(skipAnimation) {
       clearTempleLayer();
-      renderTemplesList(templesData.filter(t => t.isWorld));
+      renderTemplesList(templesData.filter(t => t.isWorld), skipAnimation);
     }
 
-    function renderIndiaTemples() {
+    function renderIndiaTemples(skipAnimation) {
       clearTempleLayer();
-      renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'));
+      renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'), skipAnimation);
     }
 
     function renderCountryDots() {
@@ -1242,7 +1304,7 @@
             <div class="country-popup-cta">Click to explore</div>
           </div>`);
 
-        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, 0] })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center', offset: [0, 0] })
           .setLngLat([lng, lat])
           .setPopup(popup)
           .addTo(map);
