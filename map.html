@@ -204,27 +204,36 @@
     }
 
     /* ── Temple Marker ── */
+    /* Height matches SVG viewBox exactly so anchor:'bottom' lands on pin tip */
     .temple-marker {
       position: relative;
       width: 32px;
-      height: 42px;
+      height: 40px;
       cursor: pointer;
       filter: drop-shadow(0 3px 6px rgba(194,0,47,0.4));
-      transition: transform 0.2s ease, filter 0.2s ease;
+      transition: filter 0.2s ease;
       pointer-events: auto;
       display: block;
+      line-height: 0;
+    }
+    .temple-marker svg {
+      display: block;
+      width: 32px;
+      height: 40px;
     }
     .custom-pin {
       position: relative;
       cursor: pointer;
       z-index: 1;
-      display: inline-block;
+      display: block;
       width: 32px;
-      height: 42px;
+      height: 40px;
       pointer-events: auto;
+      line-height: 0;
     }
-    .temple-marker:hover {
-      transform: scale(1.2) translateY(-3px);
+    .temple-marker:hover svg {
+      transform: scale(1.15);
+      transform-origin: 50% 100%;
       filter: drop-shadow(0 6px 12px rgba(194,0,47,0.6));
     }
     @keyframes markerDrop {
@@ -232,8 +241,9 @@
       60%  { transform: translateY(3px) scale(1.05); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .temple-marker.animate-in {
+    .temple-marker svg.animate-in {
       animation: markerDrop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      transform-origin: 50% 100%;
     }
 
     /* ── Country Dot ── */
@@ -550,11 +560,26 @@
   </div>
 
   <script>
+    // #region agent log
+    function __dbgLog(hypothesisId, location, message, data) {
+      fetch('http://127.0.0.1:7704/ingest/24eb9521-d6c0-434b-9956-167bb70305f9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c3cc60'},body:JSON.stringify({sessionId:'c3cc60',hypothesisId,location,message,data,timestamp:Date.now()})}).catch(()=>{});
+    }
+    function __coordFlags(lat, lng) {
+      return {
+        latAbsGt60: Math.abs(lat) > 60,
+        lngAbsGt90: Math.abs(lng) > 90,
+        latNegativeNonOcean: lat < -10,
+        looksSwappedWest: lat < 0 && Math.abs(lat) > 30 && lng > 0 && lng < 60,
+        looksSwappedIndia: lat > 60 && lng < 60
+      };
+    }
+    // #endregion
+
     // ─────────────────────────────────────────────
     // SVG GENERATORS
     // ─────────────────────────────────────────────
     function createTemplePinSvg() {
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42" class="temple-marker animate-in">
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40" class="animate-in">
         <path d="M16 40C16 40 30 24 30 14C30 6.268 23.732 0 16 0C8.268 0 2 6.268 2 14C2 24 16 40 16 40Z" fill="#C2002F"/>
         <path d="M16 38C16 38 28 23 28 14C28 7.373 22.627 2 16 2C9.373 2 4 7.373 4 14C4 23 16 38 16 38Z" fill="#A30028"/>
         <circle cx="16" cy="14" r="10" fill="white" opacity="0.95"/>
@@ -670,16 +695,209 @@
     const map = new maplibregl.Map({
       container: 'map',
       style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-      bounds: [[-130, -50], [130, 65]],
-      fitBoundsOptions: { padding: 20 },
-      dragRotate: true,
-      pitchWithRotate: true,
+      center: [20, 22],
+      zoom: getResponsiveZoom(2),
+      dragRotate: false,
+      pitchWithRotate: false,
       touchZoomRotate: true,
-      maxPitch: 75,
+      maxPitch: 0,
+      renderWorldCopies: false,
       attributionControl: false
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+    let activeTemplePopup = null;
+    let pendingTempleList = null;
+    let pendingCountryList = null;
+
+    function runWhenMapReady(fn) {
+      const attempt = () => {
+        if (map.getSource('temples-src')) {
+          resizeMap();
+          fn();
+        } else {
+          map.once('idle', attempt);
+        }
+      };
+      if (map.loaded()) attempt();
+      else map.once('load', attempt);
+    }
+
+    function getPinImageDataUrl() {
+      const svg = createTemplePinSvg().replace(' class="animate-in"', '');
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    function initMarkerLayers() {
+      if (map.getSource('temples-src')) return;
+
+      const img = new Image(32, 40);
+      img.onload = () => {
+        if (!map.hasImage('temple-pin')) {
+          map.addImage('temple-pin', img, { pixelRatio: 2 });
+        }
+      };
+      img.src = getPinImageDataUrl();
+
+      map.addSource('temples-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.addSource('countries-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      map.addLayer({
+        id: 'country-dots-layer',
+        type: 'circle',
+        source: 'countries-src',
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#C2002F',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': '#ffffff'
+        }
+      });
+
+      map.addLayer({
+        id: 'temple-pins-layer',
+        type: 'symbol',
+        source: 'temples-src',
+        layout: {
+          'icon-image': 'temple-pin',
+          'icon-size': 1,
+          'icon-anchor': 'bottom',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true
+        }
+      });
+
+      map.on('mouseenter', 'temple-pins-layer', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'temple-pins-layer', () => { map.getCanvas().style.cursor = ''; });
+      map.on('mouseenter', 'country-dots-layer', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'country-dots-layer', () => { map.getCanvas().style.cursor = ''; });
+
+      map.on('click', 'country-dots-layer', (e) => {
+        if (!e.features?.length) return;
+        showCountryTemples(e.features[0].properties.name);
+      });
+
+      map.on('click', 'temple-pins-layer', (e) => {
+        if (!e.features?.length) return;
+        showTemplePopup(e.lngLat, e.features[0].properties);
+      });
+
+      if (pendingTempleList) setTemplesGeoJson(pendingTempleList);
+      if (pendingCountryList) setCountriesGeoJson(pendingCountryList);
+    }
+
+    function templeToFeature(t) {
+      const lat = parseFloat(t.coords[0]);
+      const lng = parseFloat(t.coords[1]);
+      if (isNaN(lat) || isNaN(lng)) return null;
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [lng, lat] },
+        properties: {
+          name: t.name || '',
+          country: t.country || '',
+          state: t.state || '',
+          image: t.image || '',
+          locationUrl: t.locationUrl || '',
+          video: t.video || '',
+          tour: t.tour || '',
+          isWorld: !!t.isWorld
+        }
+      };
+    }
+
+    function buildTemplePopupHtml(props) {
+      const imgSrc = props.image || templePlaceholderSvg;
+      const countryLine = (props.country && props.country.toLowerCase().trim() !== 'india')
+        ? `<div class="popup-meta-item country">${props.country}</div>` : '';
+      const regionLine = props.state ? `<div class="popup-meta-item">${props.state}</div>` : '';
+      const safeLocation = props.locationUrl || '';
+      return `
+        <div class="premium-popup-card">
+          <div class="popup-img-container">
+            <img src="${imgSrc}" alt="${props.name}" onerror="this.src='${templePlaceholderSvg}'" />
+            <div class="popup-image-overlay"></div>
+          </div>
+          <div class="popup-body">
+            <div class="popup-title">
+              ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-title-link">${props.name}</a>` : `<span style="font-family:'Playfair Display', serif; font-size:14px; font-weight:700; color:var(--text-dark);">${props.name}</span>` }
+            </div>
+            <div class="popup-meta">${countryLine}${regionLine}</div>
+            <div class="popup-actions">
+              ${ props.video ? `<a href="${props.video}" target="_blank" rel="noopener noreferrer" class="popup-action-btn maps-btn">Directions</a>` : '' }
+              ${ props.tour ? `<a href="${props.tour}" target="_blank" rel="noopener noreferrer" class="popup-action-btn tour-btn">Tour</a>` : '' }
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function showTemplePopup(lngLat, props) {
+      if (activeTemplePopup) activeTemplePopup.remove();
+      activeTemplePopup = new maplibregl.Popup({ maxWidth: '280px', closeOnClick: true })
+        .setLngLat(lngLat)
+        .setHTML(buildTemplePopupHtml(props))
+        .addTo(map);
+    }
+
+    function setTemplesGeoJson(list) {
+      if (!map.getSource('temples-src')) {
+        pendingTempleList = list;
+        return;
+      }
+      pendingTempleList = null;
+      const features = [];
+      list.forEach(t => {
+        const f = templeToFeature(t);
+        if (f) features.push(f);
+      });
+      map.getSource('temples-src').setData({ type: 'FeatureCollection', features });
+      // #region agent log
+      features.slice(0, 6).forEach(f => {
+        __dbgLog('H', 'map.html:setTemplesGeoJson', 'geojson temple feature', {
+          name: f.properties.name,
+          coordinates: f.geometry.coordinates,
+          currentView,
+          runId: 'geojson-layer'
+        });
+      });
+      // #endregion
+    }
+
+    function setCountriesGeoJson(list) {
+      if (!map.getSource('countries-src')) {
+        pendingCountryList = list;
+        return;
+      }
+      pendingCountryList = null;
+      const features = list.map(c => {
+        const lat = parseFloat(c.coords[0]);
+        const lng = parseFloat(c.coords[1]);
+        if (isNaN(lat) || isNaN(lng)) return null;
+        return {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [lng, lat] },
+          properties: { name: c.name }
+        };
+      }).filter(Boolean);
+      map.getSource('countries-src').setData({ type: 'FeatureCollection', features });
+      // #region agent log
+      features.forEach(f => {
+        __dbgLog('H', 'map.html:setCountriesGeoJson', 'geojson country feature', {
+          name: f.properties.name,
+          coordinates: f.geometry.coordinates,
+          currentView,
+          runId: 'geojson-layer'
+        });
+      });
+      // #endregion
+    }
 
     // Ensure map resizes when the container changes size
     function resizeMap() {
@@ -694,31 +912,8 @@
       containerObserver.observe(document.documentElement);
     }
 
-    const WORLD_ZOOM_THRESHOLD = 3.3;
-    const INDIA_ZOOM_THRESHOLD = 4.8;
-    const INDIA_BOUNDS = {
-      minLng: 68, maxLng: 98,
-      minLat: 6,  maxLat: 36
-    };
-    // Flag to skip moveend during programmatic flyTo animations
+    // Flag to skip side-effects during programmatic flyTo animations
     let isProgrammaticMove = false;
-
-    function isCenterInsideIndia() {
-      const center = map.getCenter();
-      return center.lng >= INDIA_BOUNDS.minLng && center.lng <= INDIA_BOUNDS.maxLng && center.lat >= INDIA_BOUNDS.minLat && center.lat <= INDIA_BOUNDS.maxLat;
-    }
-
-    map.on('moveend', () => {
-      // Don't auto-switch when a button-triggered flyTo is in progress
-      if (isProgrammaticMove) return;
-
-      const zoom = map.getZoom();
-      if (zoom <= WORLD_ZOOM_THRESHOLD && currentView !== 'world') {
-        switchToWorldView();
-      } else if (zoom >= INDIA_ZOOM_THRESHOLD && currentView !== 'india' && isCenterInsideIndia()) {
-        switchToIndiaView();
-      }
-    });
 
     // ─────────────────────────────────────────────
     // STATE
@@ -727,8 +922,6 @@
     let templesData     = [];
     let dataReceived    = false;
     let currentView     = 'world';
-    let countryMarkers  = [];
-    let templeMarkers   = [];
     let mapLoaded       = false;
     let selectedZone    = '';
     let selectedState   = '';
@@ -776,22 +969,26 @@
     // ─────────────────────────────────────────────
     map.on('load', async () => {
       mapLoaded = true;
+      resizeMap();
+      initMarkerLayers();
       hideLoadingScreen();
 
-      // Fetch and setup World boundaries
+      // Boundary layers load async — must not block pin layers
       const worldGeo = await fetchWorldGeoJson();
       if (worldGeo) {
-        // Pre-assign colorful indices
         worldGeo.features.forEach((feature, i) => {
           feature.properties.color = STATE_COLORS[i % STATE_COLORS.length];
         });
         addWorldCountryLayers(worldGeo);
+        if (map.getLayer('temple-pins-layer')) map.moveLayer('temple-pins-layer');
+        if (map.getLayer('country-dots-layer')) map.moveLayer('country-dots-layer');
       }
 
-      // Fetch and setup India boundaries
       const indiaGeo = await fetchStatesGeoJson();
       if (indiaGeo) {
         addIndiaStateLayers(indiaGeo);
+        if (map.getLayer('temple-pins-layer')) map.moveLayer('temple-pins-layer');
+        if (map.getLayer('country-dots-layer')) map.moveLayer('country-dots-layer');
       }
     });
 
@@ -1107,61 +1304,56 @@
     // ─────────────────────────────────────────────
     // VIEWS
     // ─────────────────────────────────────────────
-    // ── "Soft" view switches — used by automatic zoom-threshold detection ──
-    // These ONLY swap markers + UI. They do NOT move the camera, so pins
-    // stay glued to their geographic positions during manual zoom/pan.
-    function switchToWorldView() {
-      currentView = 'world';
-      clearTempleLayer();
-      renderCountryDots();
-      updateBoundariesVisibility();
-      document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
-      document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
-      setActiveButton('btn-world');
-      showRegionFilter(false);
-    }
-
-    function switchToIndiaView() {
-      currentView = 'india';
-      hideCountryDots();
-      renderIndiaTemples();
-      updateBoundariesVisibility();
-      document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
-      document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
-      setActiveButton('btn-india');
-      showRegionFilter(true);
-      populateStateDropdown();
-    }
-
-    // ── "Full" view switches — used when user clicks buttons ──
-    // These fly the camera AND swap markers.
     function showWorld() {
       isProgrammaticMove = true;
       currentView = 'world';
       clearTempleLayer();
-      renderCountryDots();
+      clearCountryLayer();
       updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
       document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
       setActiveButton('btn-world');
       showRegionFilter(false);
-      map.fitBounds([[-130, -50], [130, 65]], { padding: 20, duration: 1000 });
-      map.once('moveend', () => { isProgrammaticMove = false; });
+      map.flyTo({ center: [20, 22], zoom: getResponsiveZoom(2), pitch: 0, bearing: 0, duration: 1000 });
+      map.once('moveend', () => {
+        isProgrammaticMove = false;
+        resizeMap();
+        renderCountryDots();
+        renderWorldTemples();
+        // #region agent log
+        const worldTemples = templesData.filter(t => t.isWorld).slice(0, 6);
+        const screenSamples = worldTemples.map(t => {
+          const lng = parseFloat(t.coords[1]);
+          const lat = parseFloat(t.coords[0]);
+          const px = map.project([lng, lat]);
+          return { name: t.name, lng, lat, screenX: px.x, screenY: px.y };
+        });
+        __dbgLog('H', 'map.html:showWorld:moveend', 'geojson layer screen projection', {
+          zoom: map.getZoom(), center: map.getCenter(),
+          container: map.getContainer().getBoundingClientRect(),
+          screenSamples, runId: 'geojson-layer'
+        });
+        // #endregion
+      });
     }
 
     function showIndia() {
       isProgrammaticMove = true;
       currentView = 'india';
       hideCountryDots();
-      renderIndiaTemples();
+      clearTempleLayer();
       updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
-      document.getElementById('subtitle').innerText = 'Zoom out to return to world view.';
+      document.getElementById('subtitle').innerText = 'Use the World View button to return to the global map.';
       setActiveButton('btn-india');
       showRegionFilter(true);
       populateStateDropdown();
       map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
-      map.once('moveend', () => { isProgrammaticMove = false; });
+      map.once('moveend', () => {
+        isProgrammaticMove = false;
+        resizeMap();
+        renderIndiaTemples();
+      });
     }
 
     function showCountryTemples(countryName) {
@@ -1195,81 +1387,14 @@
     // long frames when adding many DOM markers.
     // ─────────────────────────────────────────────
     function clearTempleLayer() {
-      templeMarkers.forEach(m => m.remove());
-      templeMarkers = [];
+      setTemplesGeoJson([]);
     }
     function clearCountryLayer() {
-      countryMarkers.forEach(m => m.remove());
-      countryMarkers = [];
+      setCountriesGeoJson([]);
     }
 
-    function renderTemplesList(list, skipAnimation) {
-      // Batch DOM marker creation with rAF to keep the UI responsive
-      const BATCH = 30;
-      let i = 0;
-
-      function addBatch() {
-        const end = Math.min(i + BATCH, list.length);
-        for (; i < end; i++) {
-          const t = list[i];
-          if (!t.coords || t.coords.length < 2) continue;
-          const lat = parseFloat(t.coords[0]);
-          const lng = parseFloat(t.coords[1]);
-          if (isNaN(lat) || isNaN(lng)) continue;
-          // MapLibre expects [longitude, latitude]
-          // t.coords is stored as [lat, lng] from templeMapPage.js
-          // so lng = t.coords[1], lat = t.coords[0] — correct order below
-          console.log(`Rendering "${t.name}" at lat=${lat}, lng=${lng}`);
-
-          const el = document.createElement('div');
-          el.className = 'custom-pin';
-          // Skip drop animation when auto-switching views so pins appear instantly
-          const pinSvg = skipAnimation ? createTemplePinSvg().replace('animate-in', '') : createTemplePinSvg();
-          el.innerHTML = `<div style="animation-delay:${(i % BATCH) * 0.05}s">${pinSvg}</div>`;
-
-          const imgSrc = t.image || templePlaceholderSvg;
-          const countryLine = (t.country && t.country.toLowerCase().trim() !== 'india')
-            ? `<div class="popup-meta-item country">${t.country}</div>` : '';
-          const regionLine = t.state ? `<div class="popup-meta-item">${t.state}</div>` : '';
-
-          // Build popup HTML with premium design card
-          const safeLocation = t.locationUrl || '';
-          const popup = new maplibregl.Popup({ maxWidth: '280px' }).setHTML(`
-            <div class="premium-popup-card">
-              <div class="popup-img-container">
-                <img src="${imgSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />
-                <div class="popup-image-overlay"></div>
-              </div>
-              <div class="popup-body">
-                <div class="popup-title">
-                  ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-title-link">${t.name}</a>` : `<span style="font-family:'Playfair Display', serif; font-size:14px; font-weight:700; color:var(--text-dark);">${t.name}</span>` }
-                </div>
-                <div class="popup-meta">
-                  ${countryLine}
-                  ${regionLine}
-                </div>
-                <div class="popup-actions">
-                  ${ t.video
-                    ? `<a href="${t.video}" target="_blank" rel="noopener noreferrer" class="popup-action-btn maps-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Directions</a>`
-                    : ''
-                  }
-                  ${ t.tour ? `<a href="${t.tour}" target="_blank" rel="noopener noreferrer" class="popup-action-btn tour-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Tour</a>` : '' }
-                </div>
-              </div>
-            </div>`);
-
-          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-            .setLngLat([lng, lat])
-            .setPopup(popup)
-            .addTo(map);
-          el.addEventListener('mouseenter', () => { el.style.zIndex = 999; });
-          el.addEventListener('mouseleave', () => { el.style.zIndex = 1; });
-          el.addEventListener('click', () => { el.style.zIndex = 999; });
-          templeMarkers.push(marker);
-        }
-        if (i < list.length) requestAnimationFrame(addBatch);
-      }
-      requestAnimationFrame(addBatch);
+    function renderTemplesList(list) {
+      setTemplesGeoJson(list);
     }
 
     function renderTemplesForCountry(countryName, regionFilter) {
@@ -1283,42 +1408,18 @@
       renderTemplesList(filtered);
     }
 
-    function renderWorldTemples(skipAnimation) {
+    function renderWorldTemples() {
       clearTempleLayer();
-      renderTemplesList(templesData.filter(t => t.isWorld), skipAnimation);
+      renderTemplesList(templesData.filter(t => t.isWorld));
     }
 
-    function renderIndiaTemples(skipAnimation) {
+    function renderIndiaTemples() {
       clearTempleLayer();
-      renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'), skipAnimation);
+      renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'));
     }
 
     function renderCountryDots() {
-      clearCountryLayer();
-      countriesData.forEach(c => {
-        if (!c.coords || c.coords.length < 2) return;
-        const lat = parseFloat(c.coords[0]);
-        const lng = parseFloat(c.coords[1]);
-        if (isNaN(lat) || isNaN(lng)) return;
-
-        const el = document.createElement('div');
-        el.className = 'custom-pin';
-        el.innerHTML = createCountryDotHtml();
-
-        const popup = new maplibregl.Popup({ offset: [0,-10] }).setHTML(`
-          <div class="country-popup-body">
-            <div class="country-popup-name">${c.name}</div>
-            <div class="country-popup-cta">Click to explore</div>
-          </div>`);
-
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([lng, lat])
-          .setPopup(popup)
-          .addTo(map);
-
-        el.addEventListener('click', () => showCountryTemples(c.name));
-        countryMarkers.push(marker);
-      });
+      setCountriesGeoJson(countriesData);
     }
 
     function hideCountryDots() {
@@ -1372,14 +1473,11 @@
       updateBoundariesVisibility();
 
       if (!preset && filtered.length > 0) {
-        // Fit to markers if no preset available
-        setTimeout(() => {
-          if (templeMarkers.length > 0) {
-            const bounds = new maplibregl.LngLatBounds();
-            templeMarkers.forEach(m => bounds.extend(m.getLngLat()));
-            map.fitBounds(bounds, { padding: 60, duration: 1000 });
-          }
-        }, 500);
+        const bounds = new maplibregl.LngLatBounds();
+        filtered.forEach(t => {
+          if (t.coords?.length >= 2) bounds.extend([parseFloat(t.coords[1]), parseFloat(t.coords[0])]);
+        });
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 60, duration: 1000 });
       }
 
       document.getElementById('title').innerText = `Centres in ${stateValue}`;
@@ -1411,6 +1509,20 @@
       countriesData  = msg.countries || [];
       templesData    = msg.temples   || [];
 
+      // #region agent log
+      __dbgLog('A,B,E', 'map.html:LOAD_DATA', 'payload received', {
+        countryCount: countriesData.length,
+        templeCount: templesData.length,
+        countries: countriesData.map(c => ({ name: c.name, coords: c.coords })),
+        temples: templesData.map(t => ({
+          name: t.name, country: t.country, isWorld: !!t.isWorld,
+          coords: t.coords, coordDebug: t.coordDebug || null,
+          flags: t.coords ? __coordFlags(parseFloat(t.coords[0]), parseFloat(t.coords[1])) : null
+        })),
+        mapZoom: map.getZoom(), mapCenter: map.getCenter()
+      });
+      // #endregion
+
       allIndiaStates = [...new Set(
         templesData
           .filter(t => t.country && t.country.toLowerCase().trim() === 'india' && t.state)
@@ -1423,14 +1535,11 @@
       // Ensure state dropdown has values loaded initially
       populateStateDropdown();
 
-      // Hide loading screen once data arrives
-      hideLoadingScreen();
-
-      // Show world view by default once data is loaded
-      showWorld();
-
-      // Notify the parent iframe that map is ready
-      window.parent.postMessage({ type: 'READY' }, '*');
+      // Show world view once map layers are ready
+      runWhenMapReady(() => {
+        hideLoadingScreen();
+        showWorld();
+      });
     });
 
     // Also notify on first load in case Wix sends data before map.on('load') fires

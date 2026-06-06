@@ -29,6 +29,24 @@ $w.onReady(function () {
 const INDIA_FALLBACK = { coords: /** @type {[number, number]} */ ([28.6139, 77.2090]), zoom: 5 };
 
 /**
+ * Disambiguate lat/lng when both values fall in valid ranges.
+ * Fixes US coords where longitude (e.g. -88) was stored in the latitude field.
+ * @param {number} a
+ * @param {number} b
+ * @returns {[number, number] | null}
+ */
+function normalizeLatLngPair(a, b) {
+    if (Math.abs(a) > 90 && Math.abs(b) <= 90) return [b, a];
+    if (Math.abs(b) > 90 && Math.abs(a) <= 90) return [a, b];
+    if (a < -30 && b >= -30 && b <= 90) return [b, a];
+    if (b < -30 && a >= -30 && a <= 90) return [a, b];
+    if (Math.abs(a) > 60 && Math.abs(b) < 60) return [b, a];
+    if (Math.abs(b) > 60 && Math.abs(a) < 60) return [a, b];
+    if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return [a, b];
+    return null;
+}
+
+/**
  * Gets final coordinates for a CMS item.
  * Priority:
  *   1. templeLocation short URL → resolved lat/lng (via backend)
@@ -50,9 +68,8 @@ function getCoordsForItem(item, urlCoordsMap) {
     const a = parseFloat(item.templeLatitude);
     const b = parseFloat(item.templeLongitude);
     if (!isNaN(a) && !isNaN(b)) {
-        // Auto-detect swap: latitude must be between -90 and 90
-        if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return /** @type {[number, number]} */ ([a, b]);
-        if (Math.abs(b) <= 90 && Math.abs(a) <= 180) return /** @type {[number, number]} */ ([b, a]);
+        const normalized = normalizeLatLngPair(a, b);
+        if (normalized) return /** @type {[number, number]} */ (normalized);
     }
 
     // 3. Hardcoded fallback — only for India world marker
@@ -167,6 +184,17 @@ async function loadCmsData() {
                 return;
             }
 
+            const coordSource = (item.templeLocation && urlCoordsMap[item.templeLocation])
+                ? 'url'
+                : (!isNaN(parseFloat(item.templeLatitude)) && !isNaN(parseFloat(item.templeLongitude)) ? 'db' : 'fallback');
+            const coordDebug = {
+                coordSource,
+                dbLat: item.templeLatitude,
+                dbLng: item.templeLongitude,
+                templeLocation: item.templeLocation || null,
+                urlResolved: item.templeLocation ? urlCoordsMap[item.templeLocation] : null
+            };
+
             const viewType   = (item.viewType || '').toLowerCase().trim();
             const countryKey = (item.countryName || '').toLowerCase().trim();
             const name       = item.templeName || '';
@@ -188,17 +216,16 @@ async function loadCmsData() {
                 if (!seenCountries.has(countryKey)) {
                     seenCountries.add(countryKey);
                     const zoom = countryZoomMap[countryKey] || 4;
-                    // Force the India country dot to the exact center of India so it doesn't overlap borders at low zooms
-                    const dotCoords = countryKey === 'india' ? INDIA_FALLBACK.coords : coords;
-                    countries.push({ name: country, coords: dotCoords, zoom });
-                    console.log(`Country added: ${country} at [${dotCoords}]`);
+                    // Use resolved temple coords for the country dot so it matches the pin location
+                    countries.push({ name: country, coords, zoom });
+                    console.log(`Country added: ${country} at [${coords}]`);
                 }
 
                 // Also add as a temple so the popup shows name + image
                 const locationUrl = item.templeLocation || '';
                 const video = item.templeVideo || '';
-                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl, video });
-                console.log(`World temple added: ${name} (${country}) at [${coords}]`);
+                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl, video, coordDebug });
+                console.log(`World temple added: ${name} (${country}) at [${coords}] source=${coordSource}`);
 
             } else {
                 // India or other country-specific view
@@ -208,7 +235,7 @@ async function loadCmsData() {
                 }
                 const locationUrl = item.templeLocation || '';
                 const video = item.templeVideo || '';
-                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl, video });
+                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl, video, coordDebug });
                 console.log(`Temple added: ${name} (${country}) at [${coords}]`);
             }
         });
