@@ -196,7 +196,8 @@ async function loadCmsData() {
 
                 // Also add as a temple so the popup shows name + image
                 const locationUrl = item.templeLocation || '';
-                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl });
+                const video = item.templeVideo || '';
+                temples.push({ name, state, country, coords, image, isWorld: true, locationUrl, video });
                 console.log(`World temple added: ${name} (${country}) at [${coords}]`);
 
             } else {
@@ -206,7 +207,8 @@ async function loadCmsData() {
                     return;
                 }
                 const locationUrl = item.templeLocation || '';
-                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl });
+                const video = item.templeVideo || '';
+                temples.push({ name, state, country, coords, image, isWorld: false, locationUrl, video });
                 console.log(`Temple added: ${name} (${country}) at [${coords}]`);
             }
         });

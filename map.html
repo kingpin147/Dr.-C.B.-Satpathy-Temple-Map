@@ -1216,6 +1216,10 @@
           const lat = parseFloat(t.coords[0]);
           const lng = parseFloat(t.coords[1]);
           if (isNaN(lat) || isNaN(lng)) continue;
+          // MapLibre expects [longitude, latitude]
+          // t.coords is stored as [lat, lng] from templeMapPage.js
+          // so lng = t.coords[1], lat = t.coords[0] — correct order below
+          console.log(`Rendering "${t.name}" at lat=${lat}, lng=${lng}`);
 
           const el = document.createElement('div');
           el.className = 'custom-pin';
@@ -1230,7 +1234,7 @@
 
           // Build popup HTML with premium design card
           const safeLocation = t.locationUrl || '';
-          const popup = new maplibregl.Popup({ offset: [0,-38], maxWidth: '280px' }).setHTML(`
+          const popup = new maplibregl.Popup({ maxWidth: '280px' }).setHTML(`
             <div class="premium-popup-card">
               <div class="popup-img-container">
                 <img src="${imgSrc}" alt="${t.name}" onerror="this.src='${templePlaceholderSvg}'" />
@@ -1245,13 +1249,16 @@
                   ${regionLine}
                 </div>
                 <div class="popup-actions">
-                  ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-action-btn maps-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Map</a>` : '' }
+                  ${ t.video
+                    ? `<a href="${t.video}" target="_blank" rel="noopener noreferrer" class="popup-action-btn maps-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Directions</a>`
+                    : ''
+                  }
                   ${ t.tour ? `<a href="${t.tour}" target="_blank" rel="noopener noreferrer" class="popup-action-btn tour-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Tour</a>` : '' }
                 </div>
               </div>
             </div>`);
 
-          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, 0] })
+          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat([lng, lat])
             .setPopup(popup)
             .addTo(map);
@@ -1304,7 +1311,7 @@
             <div class="country-popup-cta">Click to explore</div>
           </div>`);
 
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center', offset: [0, 0] })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([lng, lat])
           .setPopup(popup)
           .addTo(map);
