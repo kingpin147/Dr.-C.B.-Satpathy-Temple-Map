@@ -26,9 +26,9 @@
     body, html {
       margin: 0;
       padding: 0;
-      width: 100%;
-      min-height: 100%;
-      height: 100%;
+      width: 100vw;
+      min-height: 100vh;
+      height: 100vh;
       font-family: 'Mr Eaves XL Mod OT', 'Inter', sans-serif;
       background: var(--bg-white);
       color: var(--text-dark);
@@ -38,9 +38,9 @@
     .page {
       display: flex;
       flex-direction: column;
-      width: 100%;
-      min-height: 100%;
-      height: 100%;
+      width: 100vw;
+      min-height: 100vh;
+      height: 100vh;
       box-sizing: border-box;
       position: relative;
     }
@@ -560,20 +560,7 @@
   </div>
 
   <script>
-    // #region agent log
-    function __dbgLog(hypothesisId, location, message, data) {
-      fetch('http://127.0.0.1:7704/ingest/24eb9521-d6c0-434b-9956-167bb70305f9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c3cc60'},body:JSON.stringify({sessionId:'c3cc60',hypothesisId,location,message,data,timestamp:Date.now()})}).catch(()=>{});
-    }
-    function __coordFlags(lat, lng) {
-      return {
-        latAbsGt60: Math.abs(lat) > 60,
-        lngAbsGt90: Math.abs(lng) > 90,
-        latNegativeNonOcean: lat < -10,
-        looksSwappedWest: lat < 0 && Math.abs(lat) > 30 && lng > 0 && lng < 60,
-        looksSwappedIndia: lat > 60 && lng < 60
-      };
-    }
-    // #endregion
+
 
     // ─────────────────────────────────────────────
     // SVG GENERATORS
@@ -818,7 +805,7 @@
       const countryLine = (props.country && props.country.toLowerCase().trim() !== 'india')
         ? `<div class="popup-meta-item country">${props.country}</div>` : '';
       const regionLine = props.state ? `<div class="popup-meta-item">${props.state}</div>` : '';
-      const safeLocation = props.locationUrl || '';
+      const titleLinkHref = props.video || props.locationUrl || '';
       return `
         <div class="premium-popup-card">
           <div class="popup-img-container">
@@ -827,7 +814,7 @@
           </div>
           <div class="popup-body">
             <div class="popup-title">
-              ${ safeLocation ? `<a href="${safeLocation}" target="_blank" rel="noopener noreferrer" class="popup-title-link">${props.name}</a>` : `<span style="font-family:'Playfair Display', serif; font-size:14px; font-weight:700; color:var(--text-dark);">${props.name}</span>` }
+              ${ titleLinkHref ? `<a href="${titleLinkHref}" target="_blank" rel="noopener noreferrer" class="popup-title-link">${props.name}</a>` : `<span style="font-family:'Playfair Display', serif; font-size:14px; font-weight:700; color:var(--text-dark);">${props.name}</span>` }
             </div>
             <div class="popup-meta">${countryLine}${regionLine}</div>
             <div class="popup-actions">
@@ -858,16 +845,7 @@
         if (f) features.push(f);
       });
       map.getSource('temples-src').setData({ type: 'FeatureCollection', features });
-      // #region agent log
-      features.slice(0, 6).forEach(f => {
-        __dbgLog('H', 'map.html:setTemplesGeoJson', 'geojson temple feature', {
-          name: f.properties.name,
-          coordinates: f.geometry.coordinates,
-          currentView,
-          runId: 'geojson-layer'
-        });
-      });
-      // #endregion
+
     }
 
     function setCountriesGeoJson(list) {
@@ -887,16 +865,7 @@
         };
       }).filter(Boolean);
       map.getSource('countries-src').setData({ type: 'FeatureCollection', features });
-      // #region agent log
-      features.forEach(f => {
-        __dbgLog('H', 'map.html:setCountriesGeoJson', 'geojson country feature', {
-          name: f.properties.name,
-          coordinates: f.geometry.coordinates,
-          currentView,
-          runId: 'geojson-layer'
-        });
-      });
-      // #endregion
+
     }
 
     // Ensure map resizes when the container changes size
@@ -1149,6 +1118,9 @@
         updateStateFilter('india-states-hover', '');
       });
       map.on('click', 'india-states-fill', (e) => {
+        const clickedPins = map.queryRenderedFeatures(e.point, { layers: ['temple-pins-layer'] });
+        if (clickedPins.length > 0) return;
+
         if (e.features.length > 0) {
           const name = getStateName(e.features[0].properties);
           if (name) {
@@ -1307,33 +1279,17 @@
     function showWorld() {
       isProgrammaticMove = true;
       currentView = 'world';
-      clearTempleLayer();
-      clearCountryLayer();
       updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
       document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
       setActiveButton('btn-world');
       showRegionFilter(false);
+      renderCountryDots();
+      renderWorldTemples();
       map.flyTo({ center: [20, 22], zoom: getResponsiveZoom(2), pitch: 0, bearing: 0, duration: 1000 });
       map.once('moveend', () => {
         isProgrammaticMove = false;
         resizeMap();
-        renderCountryDots();
-        renderWorldTemples();
-        // #region agent log
-        const worldTemples = templesData.filter(t => t.isWorld).slice(0, 6);
-        const screenSamples = worldTemples.map(t => {
-          const lng = parseFloat(t.coords[1]);
-          const lat = parseFloat(t.coords[0]);
-          const px = map.project([lng, lat]);
-          return { name: t.name, lng, lat, screenX: px.x, screenY: px.y };
-        });
-        __dbgLog('H', 'map.html:showWorld:moveend', 'geojson layer screen projection', {
-          zoom: map.getZoom(), center: map.getCenter(),
-          container: map.getContainer().getBoundingClientRect(),
-          screenSamples, runId: 'geojson-layer'
-        });
-        // #endregion
       });
     }
 
@@ -1341,18 +1297,17 @@
       isProgrammaticMove = true;
       currentView = 'india';
       hideCountryDots();
-      clearTempleLayer();
       updateBoundariesVisibility();
       document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
       document.getElementById('subtitle').innerText = 'Use the World View button to return to the global map.';
       setActiveButton('btn-india');
       showRegionFilter(true);
       populateStateDropdown();
+      renderIndiaTemples();
       map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
       map.once('moveend', () => {
         isProgrammaticMove = false;
         resizeMap();
-        renderIndiaTemples();
       });
     }
 
@@ -1398,7 +1353,6 @@
     }
 
     function renderTemplesForCountry(countryName, regionFilter) {
-      clearTempleLayer();
       const norm = countryName.toLowerCase().trim();
       let filtered = templesData.filter(t => t.country && t.country.toLowerCase().trim() === norm);
       if (regionFilter) {
@@ -1409,12 +1363,10 @@
     }
 
     function renderWorldTemples() {
-      clearTempleLayer();
       renderTemplesList(templesData.filter(t => t.isWorld));
     }
 
     function renderIndiaTemples() {
-      clearTempleLayer();
       renderTemplesList(templesData.filter(t => !t.isWorld && t.country && t.country.toLowerCase().trim() === 'india'));
     }
 
@@ -1445,7 +1397,6 @@
       currentView = 'region';
       const preset = REGION_PRESETS[zoneValue.toLowerCase().trim()] || { center: INDIA_COORDS, zoom: INDIA_ZOOM };
       map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), pitch: 0, bearing: 0, duration: 1000 });
-      clearTempleLayer();
       renderTemplesList(templesData.filter(t =>
         t.country && t.country.toLowerCase().trim() === 'india' && getZoneForState(t.state) === zoneValue
       ));
@@ -1464,7 +1415,6 @@
         map.flyTo({ center: [preset.center[1], preset.center[0]], zoom: getResponsiveZoom(preset.zoom), pitch: 0, bearing: 0, duration: 1000 });
       }
 
-      clearTempleLayer();
       const filtered = templesData.filter(t =>
         t.country && t.country.toLowerCase().trim() === 'india' &&
         t.state && t.state.toLowerCase().trim() === stateValue.toLowerCase().trim()
@@ -1509,19 +1459,7 @@
       countriesData  = msg.countries || [];
       templesData    = msg.temples   || [];
 
-      // #region agent log
-      __dbgLog('A,B,E', 'map.html:LOAD_DATA', 'payload received', {
-        countryCount: countriesData.length,
-        templeCount: templesData.length,
-        countries: countriesData.map(c => ({ name: c.name, coords: c.coords })),
-        temples: templesData.map(t => ({
-          name: t.name, country: t.country, isWorld: !!t.isWorld,
-          coords: t.coords, coordDebug: t.coordDebug || null,
-          flags: t.coords ? __coordFlags(parseFloat(t.coords[0]), parseFloat(t.coords[1])) : null
-        })),
-        mapZoom: map.getZoom(), mapCenter: map.getCenter()
-      });
-      // #endregion
+
 
       allIndiaStates = [...new Set(
         templesData

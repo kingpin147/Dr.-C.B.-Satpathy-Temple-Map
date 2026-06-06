@@ -1,21 +1,17 @@
 import wixData from 'wix-data';
 import { resolveCoordsFromShortLinks } from 'backend/resolveMapLink';
 
-// Variables to cache fetched data and coordinate readiness
 let cachedCountries = null;
 let cachedTemples = null;
 let isDataLoaded = false;
 let isIframeReady = false;
 let hasSentData = false;
 
-// HTML Component ID on your Wix Page. Please ensure your map component ID matches this.
 const MAP_COMPONENT_ID = "#htmlMap";
 
 $w.onReady(function () {
-    // 1. Immediately kick off data query from the unified collection
     loadCmsData();
 
-    // 2. Listen for the "READY" event from the HTML component
     $w(MAP_COMPONENT_ID).onMessage((event) => {
         if (event.data && event.data.type === "READY") {
             console.log("Map HTML Component is ready to receive data.");
@@ -25,7 +21,6 @@ $w.onReady(function () {
     });
 });
 
-// Hardcoded fallback coords — ONLY for India world marker, last resort only
 const INDIA_FALLBACK = { coords: /** @type {[number, number]} */ ([28.6139, 77.2090]), zoom: 5 };
 
 /**
@@ -58,13 +53,11 @@ function normalizeLatLngPair(a, b) {
  * @returns {[number, number] | null}
  */
 function getCoordsForItem(item, urlCoordsMap) {
-    // 1. Short URL resolved coords
     if (item.templeLocation && urlCoordsMap[item.templeLocation]) {
         const c = urlCoordsMap[item.templeLocation];
         return /** @type {[number, number]} */ ([c.lat, c.lng]);
     }
 
-    // 2. DB lat/lng fields with auto-detect swap
     const a = parseFloat(item.templeLatitude);
     const b = parseFloat(item.templeLongitude);
     if (!isNaN(a) && !isNaN(b)) {
@@ -72,7 +65,6 @@ function getCoordsForItem(item, urlCoordsMap) {
         if (normalized) return /** @type {[number, number]} */ (normalized);
     }
 
-    // 3. Hardcoded fallback — only for India world marker
     const viewType = (item.viewType || '').toLowerCase().trim();
     const country  = (item.countryName || '').toLowerCase().trim();
     if (viewType === 'world' && country === 'india') {
@@ -140,8 +132,6 @@ async function loadCmsData() {
         const items = result.items || [];
         console.log(`Fetched ${items.length} records from Wix CMS.`);
 
-        // --- Step 1: Resolve short URLs in one batch call ---
-        // Collect only the items that have a templeLocation (others skip the network call entirely)
         const linkItems = items.map((item, i) => ({ index: i, url: item.templeLocation || null }));
         const urlsToResolve = linkItems.filter(x => x.url).map(x => x.url);
 
@@ -161,18 +151,10 @@ async function loadCmsData() {
             }
         });
 
-        // --- Step 2: Get final coords per item (templeLocation first, lat/lng fallback) ---
-        // getCoordsForItem is defined at module root — pass urlCoordsMap as argument
-
-        // Default zoom levels — only India has a hardcoded fallback zoom
-        // All other countries use zoom from DB or a generic default of 4
         const countryZoomMap = {
             "india": INDIA_FALLBACK.zoom
         };
 
-        // --- Step 3: Build countries and temples arrays ---
-        // countries = one marker per unique country (for world view dots)
-        // temples   = ALL items (both India and World) with name/image for rich popups
         const countries = [];
         const temples = [];
         const seenCountries = new Set();
