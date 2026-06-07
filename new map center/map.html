@@ -533,8 +533,8 @@
     <div class="panel">
       <div class="header">
         <div class="header-title-container">
-          <h1 id="title">Global Spiritual &amp; Charitable Centres</h1>
-          <p class="subtitle" id="subtitle">Click any country marker, or use the India button, to explore regions.</p>
+          <h1 id="title">Shri Guru Bhagwat Centres</h1>
+          <p class="subtitle" id="subtitle">Explore Shri Guru Bhagwat Centres across regions.</p>
         </div>
         <div class="controls">
           <button id="btn-world" onclick="showWorld()">World View</button>
@@ -805,7 +805,7 @@
       const countryLine = (props.country && props.country.toLowerCase().trim() !== 'india')
         ? `<div class="popup-meta-item country">${props.country}</div>` : '';
       const regionLine = props.state ? `<div class="popup-meta-item">${props.state}</div>` : '';
-      const titleLinkHref = props.video || '';
+      const titleLinkHref = props.locationUrl || '';
       const directionsHref = props.locationUrl || '';
       
       return `
@@ -1291,7 +1291,7 @@
       isProgrammaticMove = true;
       currentView = 'world';
       updateBoundariesVisibility();
-      document.getElementById('title').innerText = 'Global Spiritual & Charitable Centres';
+      document.getElementById('title').innerText = 'Shri Guru Bhagwat Centres';
       document.getElementById('subtitle').innerText = 'Click any country marker, or use the India button, to explore regions.';
       setActiveButton('btn-world');
       showRegionFilter(false);
@@ -1309,7 +1309,7 @@
       currentView = 'india';
       hideCountryDots();
       updateBoundariesVisibility();
-      document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
+      document.getElementById('title').innerText = 'Shri Guru Bhagwat Centres in India';
       document.getElementById('subtitle').innerText = 'Use the World View button to return to the global map.';
       setActiveButton('btn-india');
       showRegionFilter(true);
@@ -1339,7 +1339,7 @@
 
       currentView = 'country';
       updateBoundariesVisibility();
-      document.getElementById('title').innerText = `Spiritual & Charitable Centres — ${countryName}`;
+      document.getElementById('title').innerText = `Shri Guru Bhagwat Centres — ${countryName}`;
       document.getElementById('subtitle').innerText = `Markers are now visible across ${countryName}.`;
       setActiveButton(null);
       showRegionFilter(false);
@@ -1400,7 +1400,7 @@
         map.flyTo({ center: [INDIA_COORDS[1], INDIA_COORDS[0]], zoom: getResponsiveZoom(INDIA_ZOOM), pitch: 0, bearing: 0, duration: 1000 });
         renderIndiaTemples();
         updateBoundariesVisibility();
-        document.getElementById('title').innerText = 'Spiritual & Charitable Centres in India';
+        document.getElementById('title').innerText = 'Shri Guru Bhagwat Centres in India';
         document.getElementById('subtitle').innerText = 'Filter by Zone or State, or click any state on the map.';
         return;
       }
