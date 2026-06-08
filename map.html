@@ -49,7 +49,9 @@
     .loading-overlay {
       position: absolute;
       inset: 0;
-      background: var(--bg-white);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -805,8 +807,8 @@
       const countryLine = (props.country && props.country.toLowerCase().trim() !== 'india')
         ? `<div class="popup-meta-item country">${props.country}</div>` : '';
       const regionLine = props.state ? `<div class="popup-meta-item">${props.state}</div>` : '';
-      const titleLinkHref = props.video || '';
-      const directionsHref = props.locationUrl || '';
+      const titleLinkHref = props.video || props.locationUrl || '';
+      const directionsHref = props.video || props.locationUrl || '';
       
       return `
         <div class="premium-popup-card">
@@ -942,6 +944,12 @@
       mapLoaded = true;
       resizeMap();
       initMarkerLayers();
+
+      // If data arrived before the map loaded, render immediately
+      if (dataReceived) {
+        hideLoadingScreen();
+        showWorld();
+      }
 
       // Boundary layers load async — must not block pin layers
       const worldGeo = await fetchWorldGeoJson();
@@ -1484,11 +1492,11 @@
       // Ensure state dropdown has values loaded initially
       populateStateDropdown();
 
-      // Show world view once map layers are ready
-      runWhenMapReady(() => {
+      // If map is already loaded, render immediately; otherwise map.on('load') will handle it
+      if (mapLoaded) {
         hideLoadingScreen();
         showWorld();
-      });
+      }
     });
 
     // Also notify on first load in case Wix sends data before map.on('load') fires

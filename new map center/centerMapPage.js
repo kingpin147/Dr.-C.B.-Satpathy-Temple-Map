@@ -153,7 +153,9 @@ async function loadCmsData() {
             const country = (item.address && item.address.countryFullname) ? item.address.countryFullname : 'India';
             const countryKey = country.toLowerCase().trim();
             const image = wixImageToUrl(item.image || '');
-            const locationUrl = item.url || '';
+            // Build a unique Google Maps directions link from the resolved coordinates
+            // (item.url is the short-link used for coord resolution — often shared across items)
+            const locationUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords[0]},${coords[1]}`;
             const video = '';
 
             if (!name) {

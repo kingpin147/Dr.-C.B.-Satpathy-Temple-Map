@@ -204,7 +204,8 @@ async function loadCmsData() {
                 }
 
                 // Also add as a temple so the popup shows name + image
-                const locationUrl = item.templeLocation || '';
+                // Build a unique Google Maps directions link from the resolved coordinates
+                const locationUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords[0]},${coords[1]}`;
                 const video = item.templeVideo || '';
                 temples.push({ name, state, country, coords, image, isWorld: true, locationUrl, video, coordDebug });
                 console.log(`World temple added: ${name} (${country}) at [${coords}] source=${coordSource}`);
@@ -215,7 +216,8 @@ async function loadCmsData() {
                     console.warn(`Skipping temple item — missing templeName (viewType: "${item.viewType}", country: "${country}")`);
                     return;
                 }
-                const locationUrl = item.templeLocation || '';
+                // Build a unique Google Maps directions link from the resolved coordinates
+                const locationUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords[0]},${coords[1]}`;
                 const video = item.templeVideo || '';
                 temples.push({ name, state, country, coords, image, isWorld: false, locationUrl, video, coordDebug });
                 console.log(`Temple added: ${name} (${country}) at [${coords}]`);
