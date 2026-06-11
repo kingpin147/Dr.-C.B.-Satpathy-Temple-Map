@@ -807,9 +807,11 @@
       const countryLine = (props.country && props.country.toLowerCase().trim() !== 'india')
         ? `<div class="popup-meta-item country">${props.country}</div>` : '';
       const regionLine = props.state ? `<div class="popup-meta-item">${props.state}</div>` : '';
+      // Title click → video link first, fallback to Google Maps
       const titleLinkHref = props.video || props.locationUrl || '';
-      const directionsHref = props.video || props.locationUrl || '';
-      
+      // Directions button → always Google Maps directions, never the video
+      const directionsHref = props.locationUrl || '';
+
       return `
         <div class="premium-popup-card">
           <div class="popup-img-container">

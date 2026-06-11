@@ -42,10 +42,50 @@ function normalizeLatLngPair(a, b) {
 }
 
 /**
+ * Approximate centre coords for each region/state name.
+ * Used as a last-resort fallback when URL resolution fails and no
+ * address.location is stored in the CMS record.
+ */
+const REGION_FALLBACK_COORDS = {
+    'andhra pradesh':  [15.9129,  79.7400],
+    'assam':           [26.2006,  92.9376],
+    'bihar':           [25.0961,  85.3131],
+    'chhattisgarh':    [21.2787,  81.8661],
+    'goa':             [15.2993,  74.1240],
+    'gujarat':         [22.2587,  71.1924],
+    'haryana':         [29.0588,  76.0856],
+    'himachal pradesh':[31.1048,  77.1734],
+    'jharkhand':       [23.6102,  85.2799],
+    'karnataka':       [15.3173,  75.7139],
+    'kerala':          [10.8505,  76.2711],
+    'madhya pradesh':  [22.9734,  78.6569],
+    'maharashtra':     [19.7515,  75.7139],
+    'manipur':         [24.6637,  93.9063],
+    'meghalaya':       [25.4670,  91.3662],
+    'mizoram':         [23.1645,  92.9376],
+    'nagaland':        [26.1584,  94.5624],
+    'odisha':          [20.9517,  85.0985],
+    'punjab':          [31.1471,  75.3412],
+    'rajasthan':       [27.0238,  74.2179],
+    'sikkim':          [27.5330,  88.5122],
+    'tamil nadu':      [11.1271,  78.6569],
+    'telangana':       [18.1124,  79.0193],
+    'tripura':         [23.9408,  91.9882],
+    'uttar pradesh':   [26.8467,  80.9462],
+    'uttarakhand':     [30.0668,  79.0193],
+    'west bengal':     [22.9868,  87.8550],
+    'delhi':           [28.6139,  77.2090],
+    'gurugram':        [28.4595,  77.0266],
+    'noida':           [28.5355,  77.3910],
+    'usa':             [37.0902, -95.7129],
+};
+
+/**
  * Gets final coordinates for a CMS item.
  * Priority:
  *   1. url short URL → resolved lat/lng (via backend)
  *   2. address.location DB fields
+ *   3. region name → approximate state/city fallback coords
  * @param {object} item - CMS record
  * @param {object} urlCoordsMap - map of resolved short URL → { lat, lng }
  * @returns {[number, number] | null}
@@ -62,6 +102,15 @@ function getCoordsForItem(item, urlCoordsMap) {
         if (!isNaN(a) && !isNaN(b)) {
             const normalized = normalizeLatLngPair(a, b);
             if (normalized) return /** @type {[number, number]} */ (normalized);
+        }
+    }
+
+    // Fallback: use region name to place pin at approximate state centre
+    if (item.region) {
+        const key = item.region.toLowerCase().trim();
+        if (REGION_FALLBACK_COORDS[key]) {
+            console.warn(`Using region fallback coords for "${item.title || item.region}"`);
+            return /** @type {[number, number]} */ (REGION_FALLBACK_COORDS[key]);
         }
     }
 
@@ -156,7 +205,7 @@ async function loadCmsData() {
             // Build a unique Google Maps directions link from the resolved coordinates
             // (item.url is the short-link used for coord resolution — often shared across items)
             const locationUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords[0]},${coords[1]}`;
-            const video = '';
+            const video = item.gbCenterVideo || '';
 
             if (!name) {
                 console.warn(`Skipping item — missing title`);
